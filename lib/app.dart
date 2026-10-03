@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'data/services/app_providers.dart';
 import 'features/home/home_shell.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/splash/splash_screen.dart';
 
 class RasaApp extends ConsumerWidget {
   const RasaApp({super.key});
@@ -13,13 +14,24 @@ class RasaApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
+    Widget home;
+    if (!session.initialized) {
+      home = const SplashScreen();
+    } else if (session.onboarded) {
+      home = const HomeShell();
+    } else {
+      home = const OnboardingScreen();
+    }
+
     return MaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      home: session.onboarded ? const HomeShell() : const OnboardingScreen(),
+      themeMode: themeMode,
+      home: home,
     );
   }
 }

@@ -7,7 +7,7 @@ import '../../data/services/app_providers.dart';
 import '../post/create_post_screen.dart';
 import '../post/post_detail_screen.dart';
 
-/// Beranda: pertanyaan harian + filter mood + feed curhatan.
+/// Beranda: pencarian + pertanyaan harian + filter mood + feed cerita.
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
 
@@ -15,19 +15,33 @@ class FeedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(feedProvider);
     final filter = ref.watch(moodFilterProvider);
+    final query = ref.watch(searchQueryProvider);
     final question = ref.watch(dailyQuestionProvider);
     final session = ref.watch(sessionProvider);
     final isDemo = ref.watch(demoModeProvider);
     final scheme = Theme.of(context).colorScheme;
 
-    final posts =
-        filter == null ? feed : feed.where((p) => p.mood == filter).toList();
+    final q = query.trim().toLowerCase();
+    final posts = feed.where((p) {
+      if (filter != null && p.mood != filter) return false;
+      if (q.isEmpty) return true;
+      return p.text.toLowerCase().contains(q) ||
+          p.alias.toLowerCase().contains(q);
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '💜 ${AppConfig.appName}',
-          style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const RasaLogo(size: 30),
+            const SizedBox(width: 8),
+            Text(
+              AppConfig.appName,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w900, letterSpacing: 2),
+            ),
+          ],
         ),
         actions: [
           if (isDemo)
@@ -48,7 +62,11 @@ class FeedScreen extends ConsumerWidget {
               ),
             ),
           Chip(
-            avatar: const Text('🔥'),
+            avatar: Icon(
+              Icons.local_fire_department,
+              size: 16,
+              color: scheme.primary,
+            ),
             label: Text('${session.streak}'),
             visualDensity: VisualDensity.compact,
           ),
@@ -58,18 +76,35 @@ class FeedScreen extends ConsumerWidget {
       body: feed.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: () async {
-                await Future.delayed(const Duration(milliseconds: 700));
-              },
+              onRefresh: () => ref.read(feedProvider.notifier).reload(),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Pencarian
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Cari cerita atau nama samaran',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: q.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () => ref
+                                  .read(searchQueryProvider.notifier)
+                                  .state = '',
+                            ),
+                    ),
+                    onChanged: (v) => ref
+                        .read(searchQueryProvider.notifier)
+                        .state = v,
+                  ),
+                  const SizedBox(height: 12),
                   DailyQuestionCard(
                     question: question,
                     onAnswer: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => CreatePostScreen(
-                          initialText: 'Jawaban untuk "$question"\n\n',
+                          initialText: 'Menjawab "$question"\n\n',
                         ),
                       ),
                     ),
@@ -80,29 +115,52 @@ class FeedScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         ChoiceChip(
-                          label: const Text('✨ Semua'),
+                          avatar: const Icon(Icons.apps, size: 18),
+                          label: const Text('Semua'),
                           selected: filter == null,
                           onSelected: (_) => ref
                               .read(moodFilterProvider.notifier)
                               .state = null,
                         ),
-                        const SizedBox(width: 8),
                         for (final m in kMoods) ...[
+                          const SizedBox(width: 8),
                           ChoiceChip(
-                            label: Text('${m.emoji} ${m.label}'),
+                            avatar:
+                                Icon(m.icon, size: 18, color: m.color),
+                            label: Text(m.label),
                             selected: filter == m.id,
                             onSelected: (_) => ref
                                 .read(moodFilterProvider.notifier)
                                 .state = m.id,
                           ),
-                          const SizedBox(width: 8),
                         ],
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
+                  if (q.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        '${posts.length} hasil untuk "$query"',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   if (posts.isEmpty)
-                    const EmptyFeed()
+                    EmptyFeed(
+                      icon: q.isNotEmpty
+                          ? Icons.search_off
+                          : Icons.forum_outlined,
+                      title: q.isNotEmpty
+                          ? 'Tidak ditemukan'
+                          : 'Belum ada cerita',
+                      message: q.isNotEmpty
+                          ? 'Coba kata kunci lain atau ubah filter mood.'
+                          : 'Jadilah yang pertama berbagi di sini.',
+                    )
                   else
                     for (final p in posts) ...[
                       RasaPostCard(

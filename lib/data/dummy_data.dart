@@ -7,7 +7,7 @@ List<RasaPost> dummyPosts() {
   return [
     RasaPost(
       id: 'p1',
-      text: 'Capek banget hari ini. Kerjaan numpuk, chat numpuk, yang nanya kabar nol. Kadang pengen hilang sehari aja gitu.',
+      text: 'Capek sekali hari ini. Pekerjaan menumpuk, pesan menumpuk, tapi tidak ada yang menanyakan kabar. Kadang rasanya ingin menghilang sehari saja.',
       mood: 'sedih',
       authorId: 'u1',
       alias: 'Senja Mendung',
@@ -15,11 +15,11 @@ List<RasaPost> dummyPosts() {
       hugCount: 24,
       meTooCount: 11,
       replyCount: 3,
-      aiReply: 'Denger ceritamu berasa berat banget ya. Makasih udah berani cerita di sini. Hari yang berat bukan berarti kamu gagal — istirahat itu juga produktif lho. 🫂',
+      aiReply: 'Terima kasih sudah berbagi. Hari yang berat bukan berarti kamu gagal, istirahat juga bentuk produktivitas. Ceritakan lebih lanjut jika kamu mau, saya mendengarkan.',
     ),
     RasaPost(
       id: 'p2',
-      text: 'Hari ini genap 30 hari aku journaling tiap malam. Nggak nyangka hal sekecil nulis bisa bikin kepala jauh lebih tenang. Buat yang lagi mulai: gas terus ya ✨',
+      text: 'Hari ini genap 30 hari saya journaling setiap malam. Tidak menyangka hal sekecil menulis bisa membuat pikiran jauh lebih tenang. Untuk yang baru mulai: lanjutkan.',
       mood: 'seneng',
       authorId: 'u2',
       alias: 'Embun Pagi',
@@ -30,7 +30,7 @@ List<RasaPost> dummyPosts() {
     ),
     RasaPost(
       id: 'p3',
-      text: 'Overthinking lagi. Tadi salah ngomong dikit di grup kantor, sekarang kepikiran terus. Padahal orang lain mungkin udah lupa. Ada yang sama?',
+      text: 'Overthinking lagi. Tadi salah bicara sedikit di grup kantor, sekarang kepikiran terus. Padahal orang lain mungkin sudah lupa. Ada yang sama?',
       mood: 'flat',
       authorId: 'u3',
       alias: 'Kopi Susu',
@@ -38,11 +38,11 @@ List<RasaPost> dummyPosts() {
       hugCount: 18,
       meTooCount: 32,
       replyCount: 6,
-      aiReply: 'Wah, overthinking kayak gitu tuh manusiawi banget. Coba tes realita 10 detik: kalau temenmu yang salah ngomong, kamu bakal inget sampe besok nggak? Kemungkinan besar enggak. Kamu aman. 💛',
+      aiReply: 'Overthinking seperti itu manusiawi sekali. Coba uji realita sebentar: jika temanmu yang salah bicara, apakah kamu akan mengingatnya sampai besok? Kemungkinan besar tidak. Kamu aman.',
     ),
     RasaPost(
       id: 'p4',
-      text: 'Baru diputusin setelah 3 tahun. Rasanya kayak semua rencana masa depan ke-reset. Buat yang pernah lewatin ini, berapa lama sampai baikan?',
+      text: 'Baru putus setelah 3 tahun. Rasanya seperti semua rencana masa depan ter-reset. Untuk yang pernah melewati ini, berapa lama sampai membaik?',
       mood: 'hancur',
       authorId: 'u4',
       alias: 'Hujan Rintik',
@@ -50,11 +50,11 @@ List<RasaPost> dummyPosts() {
       hugCount: 89,
       meTooCount: 21,
       replyCount: 12,
-      aiReply: 'Turut ngerasain sakitnya. 3 tahun itu bukan waktu sebentar, wajar kalau rasanya kayak kehilangan arah. Pelan-pelan ya, nggak ada target harus sembuh kapan. Satu hari satu langkah. 🌙',
+      aiReply: 'Turut merasakan kehilanganmu. Tiga tahun bukan waktu yang sebentar, wajar jika rasanya seperti kehilangan arah. Pelan-pelan saja, tidak ada target harus pulih kapan pun.',
     ),
     RasaPost(
       id: 'p5',
-      text: 'Small win hari ini: berani nolak lembur dan pulang on-time. Ternyata dunia nggak kiamat. Besok mau coba lagi 😌',
+      text: 'Small win hari ini: berani menolak lembur dan pulang tepat waktu. Ternyata dunia tidak kiamat. Besok coba lagi.',
       mood: 'lumayan',
       authorId: 'u5',
       alias: 'Komet Lewat',
@@ -65,7 +65,7 @@ List<RasaPost> dummyPosts() {
     ),
     RasaPost(
       id: 'p6',
-      text: 'Skripsi bab 4 revisi ke-6. Dosen cuma bales "coba baca lagi". Baca apanya pak 😭 ada pejuang skripsi lain di sini? Kita bisa!',
+      text: 'Skripsi bab 4 revisi keenam. Dosen hanya membalas "coba baca lagi". Ada pejuang skripsi lain di sini? Kita pasti bisa.',
       mood: 'sedih',
       authorId: 'u6',
       alias: 'Kucing Galau',
@@ -76,7 +76,7 @@ List<RasaPost> dummyPosts() {
     ),
     RasaPost(
       id: 'p7',
-      text: 'Tadi pagi ibu nelpon cuma buat bilang "jangan lupa makan". Sesederhana itu tapi langsung mewek di kos. Sehat-sehat ya semua ibu di dunia 🤍',
+      text: 'Tadi pagi ibu menelepon hanya untuk bilang "jangan lupa makan". Sesederhana itu tapi langsung berkaca-kaca di kos. Sehat-sehat untuk semua ibu di dunia.',
       mood: 'lumayan',
       authorId: 'u7',
       alias: 'Daun Gugur',
@@ -87,7 +87,7 @@ List<RasaPost> dummyPosts() {
     ),
     RasaPost(
       id: 'p8',
-      text: 'Ngerasa ketinggalan dari temen-temen. Mereka udah nikah, karir naik, aku masih gini-gini aja di umur 26. Logikanya ngerti tiap orang jalannya beda, tapi hatinya susah nerima.',
+      text: 'Rasanya tertinggal dari teman-teman. Mereka sudah menikah, karier naik, saya masih begini-begini saja di umur 26. Logikanya paham setiap orang jalannya beda, tapi hatinya sulit menerima.',
       mood: 'sedih',
       authorId: 'u8',
       alias: 'Bulan Sabit',
@@ -95,20 +95,21 @@ List<RasaPost> dummyPosts() {
       hugCount: 67,
       meTooCount: 44,
       replyCount: 11,
-      aiReply: 'Perasaan itu berat, dan valid. Tapi inget: yang kamu lihat dari orang lain itu highlight reel, bukan behind the scene-nya. Umur 26 masih bab awal banget. Kamu nggak telat, kamu lagi di jalanmu sendiri. 🌱',
+      aiReply: 'Perasaan itu berat, dan valid. Tapi ingat: yang kamu lihat dari orang lain adalah pencapaian yang terlihat, bukan proses di baliknya. Umur 26 masih sangat awal. Kamu tidak terlambat.',
     ),
   ];
 }
 
-/// Balasan dummy per postingan.
+/// Tanggapan dummy per cerita.
 Map<String, List<RasaReply>> dummyReplies() {
   final now = DateTime.now();
-  RasaReply r(String id, String postId, String text, String alias, Duration ago, {bool isAI = false}) {
+  RasaReply r(String id, String postId, String text, String alias, Duration ago,
+      {bool isAI = false}) {
     return RasaReply(
       id: id,
       postId: postId,
       text: text,
-      alias: isAI ? '✨ RASA AI' : alias,
+      alias: isAI ? 'RASA AI' : alias,
       authorId: isAI ? 'ai' : 'ux-$alias',
       createdAt: now.subtract(ago),
       isAI: isAI,
@@ -117,19 +118,26 @@ Map<String, List<RasaReply>> dummyReplies() {
 
   return {
     'p1': [
-      r('r11', 'p1', 'Peluk jauh kak 🫂 aku juga lagi di fase ini. Kita lewatin bareng ya.', 'Ombak Tenang', const Duration(minutes: 5)),
-      r('r12', 'p1', 'Saran kecil: matiin notif 1 jam sebelum tidur. Ngaruh banget ke aku.', 'Angin Malam', const Duration(minutes: 2)),
+      r('r11', 'p1', 'Peluk jauh. Saya juga sedang di fase ini. Kita lewati bersama ya.',
+          'Ombak Tenang', const Duration(minutes: 5)),
+      r('r12', 'p1', 'Saran kecil: matikan notifikasi satu jam sebelum tidur. Sangat berpengaruh untuk saya.',
+          'Angin Malam', const Duration(minutes: 2)),
     ],
     'p4': [
-      r('r41', 'p4', 'Aku butuh 4 bulan buat beneran baikan. Tiap orang beda, jangan dipaksa cepet ya.', 'Senja Mendung', const Duration(hours: 2)),
-      r('r42', 'p4', 'Hapus chat boleh, blokir boleh, nangis tiap malem juga boleh. Semua fase itu normal.', 'Komet Lewat', const Duration(hours: 1)),
+      r('r41', 'p4', 'Saya butuh 4 bulan sampai benar-benar membaik. Setiap orang berbeda, jangan dipaksa cepat ya.',
+          'Senja Mendung', const Duration(hours: 2)),
+      r('r42', 'p4', 'Menghapus chat boleh, menangis tiap malam juga boleh. Semua fase itu normal.',
+          'Komet Lewat', const Duration(hours: 1)),
     ],
     'p3': [
-      r('r31', 'p3', 'SAMA BANGET. Aku sampe replay omongan di kepala 10x. Ternyata atasan aja lupa 😭', 'Kucing Galau', const Duration(minutes: 50)),
+      r('r31', 'p3', 'Sama persis. Saya sampai memutar ulang omongan di kepala berkali-kali. Ternyata atasan pun lupa.',
+          'Kucing Galau', const Duration(minutes: 50)),
     ],
     'p6': [
-      r('r61', 'p6', 'Pejuang bab 4 juga bang ✊ revisi ke-8 di sini. Semangat kita wisuda bareng tahun ini!', 'Hujan Rintik', const Duration(hours: 6)),
-      r('r62', 'p6', 'Tips: kirim revisi pagi-pagi, dosen biasanya lagi good mood 😆', 'Kopi Susu', const Duration(hours: 4)),
+      r('r61', 'p6', 'Pejuang bab 4 juga. Revisi kedelapan di sini. Semangat, kita wisuda bareng tahun ini.',
+          'Hujan Rintik', const Duration(hours: 6)),
+      r('r62', 'p6', 'Tips: kirim revisi pagi-pagi, dosen biasanya sedang suasana baik.',
+          'Kopi Susu', const Duration(hours: 4)),
     ],
   };
 }

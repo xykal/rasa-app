@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -14,9 +15,15 @@ import 'gemini_service.dart';
 
 const _uuid = Uuid();
 
+/// Nama tampilan asisten AI di seluruh aplikasi.
+const String kAiAlias = 'RASA AI';
+
 /// true = data lokal (demo). Bisa di-toggle live dari halaman Profil.
 /// Default dari --dart-define=DEMO_MODE (default: true).
 final demoModeProvider = StateProvider<bool>((ref) => AppConfig.kDemoMode);
+
+/// Kata kunci pencarian di feed.
+final searchQueryProvider = StateProvider<String>((ref) => '');
 
 bool get _cloudReady {
   try {
@@ -26,18 +33,59 @@ bool get _cloudReady {
   }
 }
 
+// ─── TEMA (terang / gelap / sistem, tersimpan) ───────────────────
+
+final themeModeProvider =
+    StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
+  return ThemeNotifier();
+});
+
+class ThemeNotifier extends StateNotifier<ThemeMode> {
+  ThemeNotifier() : super(ThemeMode.system) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      state = switch (p.getString('rasa_theme')) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      };
+    } catch (_) {}
+  }
+
+  Future<void> setMode(ThemeMode mode) async {
+    state = mode;
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(
+        'rasa_theme',
+        switch (mode) {
+          ThemeMode.light => 'light',
+          ThemeMode.dark => 'dark',
+          ThemeMode.system => 'system',
+        },
+      );
+    } catch (_) {}
+  }
+}
+
 // ─── SESSION (user anonim + streak) ──────────────────────────────
 
 class SessionState {
   final String userId;
   final String alias;
   final bool onboarded;
+  final bool initialized;
   final String? todayMood;
   final int streak;
   const SessionState({
     required this.userId,
     required this.alias,
     required this.onboarded,
+    required this.initialized,
     required this.todayMood,
     required this.streak,
   });
@@ -45,6 +93,7 @@ class SessionState {
   SessionState copyWith({
     String? alias,
     bool? onboarded,
+    bool? initialized,
     String? todayMood,
     int? streak,
   }) {
@@ -52,6 +101,7 @@ class SessionState {
       userId: userId,
       alias: alias ?? this.alias,
       onboarded: onboarded ?? this.onboarded,
+      initialized: initialized ?? this.initialized,
       todayMood: todayMood ?? this.todayMood,
       streak: streak ?? this.streak,
     );
@@ -71,6 +121,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
             userId: _uuid.v4(),
             alias: kAnonAliases[Random().nextInt(kAnonAliases.length)],
             onboarded: false,
+            initialized: false,
             todayMood: null,
             streak: 0,
           ),
@@ -105,13 +156,16 @@ class SessionNotifier extends StateNotifier<SessionState> {
         userId: uid,
         alias: p.getString('rasa_alias') ?? state.alias,
         onboarded: p.getBool('rasa_onboarded') ?? false,
+        initialized: true,
         todayMood: p.getString('rasa_mood_date') == today
             ? p.getString('rasa_mood')
             : null,
         streak: streak,
       );
       await p.setString('rasa_user_id', uid);
-    } catch (_) {}
+    } catch (_) {
+      state = state.copyWith(initialized: true);
+    }
   }
 
   Future<void> finishOnboarding(String mood) async {
@@ -135,7 +189,25 @@ class SessionNotifier extends StateNotifier<SessionState> {
     } catch (_) {}
   }
 
-  /// Dipanggil tiap user bikin post/balasan → update streak harian.
+  /// Ganti nama samaran manual. Return error kalau tidak valid.
+  Future<String?> setAlias(String alias) async {
+    final clean = alias.trim();
+    if (clean.isEmpty) return 'Nama samaran tidak boleh kosong.';
+    if (clean.length > AppConfig.maxAliasLength) {
+      return 'Maksimal ${AppConfig.maxAliasLength} karakter.';
+    }
+    if (containsBanned(clean)) {
+      return 'Nama samaran mengandung kata yang kurang pantas.';
+    }
+    state = state.copyWith(alias: clean);
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString('rasa_alias', clean);
+    } catch (_) {}
+    return null;
+  }
+
+  /// Dipanggil tiap user bikin cerita/tanggapan → update streak harian.
   Future<void> markActiveToday() async {
     try {
       final p = await SharedPreferences.getInstance();
@@ -187,9 +259,8 @@ class FeedNotifier extends StateNotifier<List<RasaPost>> {
             .limit(50)
             .snapshots()
             .listen((snap) {
-          state = snap.docs
-              .map((d) => RasaPost.fromMap(d.id, d.data()))
-              .toList();
+          state =
+              snap.docs.map((d) => RasaPost.fromMap(d.id, d.data())).toList();
         }, onError: (_) => state = dummyPosts());
         return;
       } catch (_) {}
@@ -199,15 +270,31 @@ class FeedNotifier extends StateNotifier<List<RasaPost>> {
     state = dummyPosts();
   }
 
-  /// Bikin postingan baru. Return error message kalau gagal, null kalau sukses.
+  /// Dipanggil pull-to-refresh. Mode cloud ambil ulang, demo biarkan state.
+  Future<void> reload() async {
+    if (_useCloud) {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('posts')
+            .orderBy('createdAt', descending: true)
+            .limit(50)
+            .get();
+        state = snap.docs.map((d) => RasaPost.fromMap(d.id, d.data())).toList();
+      } catch (_) {}
+      return;
+    }
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  /// Bikin cerita baru. Return error message kalau gagal, null kalau sukses.
   Future<String?> addPost({required String text, required String mood}) async {
     final clean = text.trim();
-    if (clean.isEmpty) return 'Tulis dulu curhatanmu 🌙';
+    if (clean.isEmpty) return 'Tulis dulu ceritamu.';
     if (clean.length > AppConfig.maxPostLength) {
-      return 'Kepanjangan, maksimal ${AppConfig.maxPostLength} karakter ya.';
+      return 'Maksimal ${AppConfig.maxPostLength} karakter ya.';
     }
     if (containsBanned(clean)) {
-      return 'Ups, ada kata yang kurang pantas. Coba ubah dikit bahasanya 🙏';
+      return 'Ada kata yang kurang pantas. Coba ubah sedikit bahasanya.';
     }
 
     final s = ref.read(sessionProvider);
@@ -230,7 +317,7 @@ class FeedNotifier extends StateNotifier<List<RasaPost>> {
         ref.read(sessionProvider.notifier).markActiveToday();
         return null;
       } catch (_) {
-        return 'Gagal kirim. Cek koneksi lalu coba lagi.';
+        return 'Gagal mengirim. Periksa koneksi lalu coba lagi.';
       }
     }
 
@@ -244,9 +331,7 @@ class FeedNotifier extends StateNotifier<List<RasaPost>> {
     state = [
       for (final p in state) p.id == post.id ? p.copyWith(aiReply: ai) : p,
     ];
-    ref
-        .read(repliesProvider(post.id).notifier)
-        .addAiReply(ai, postId: post.id);
+    ref.read(repliesProvider(post.id).notifier).addAiReply(ai, postId: post.id);
     return null;
   }
 
@@ -262,7 +347,7 @@ class FeedNotifier extends StateNotifier<List<RasaPost>> {
               id: _uuid.v4(),
               postId: postId,
               text: ai,
-              alias: '✨ RASA AI',
+              alias: kAiAlias,
               authorId: 'ai',
               createdAt: DateTime.now(),
               isAI: true,
@@ -272,6 +357,19 @@ class FeedNotifier extends StateNotifier<List<RasaPost>> {
         'replyCount': FieldValue.increment(1),
       });
     } catch (_) {}
+  }
+
+  /// Hapus cerita milik sendiri.
+  Future<void> deletePost(String postId) async {
+    if (_useCloud) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('posts')
+            .doc(postId)
+            .delete();
+      } catch (_) {}
+    }
+    state = [for (final p in state) if (p.id != postId) p];
   }
 
   void toggleHug(String postId) {
@@ -316,9 +414,19 @@ class FeedNotifier extends StateNotifier<List<RasaPost>> {
         if (p.id == postId) p.copyWith(replyCount: p.replyCount + 1) else p,
     ];
   }
+
+  void debumpReplyCount(String postId) {
+    state = [
+      for (final p in state)
+        if (p.id == postId && p.replyCount > 0)
+          p.copyWith(replyCount: p.replyCount - 1)
+        else
+          p,
+    ];
+  }
 }
 
-// ─── REPLIES (per postingan) ─────────────────────────────────────
+// ─── REPLIES (per cerita) ────────────────────────────────────────
 
 final repliesProvider =
     StateNotifierProvider.family<RepliesNotifier, List<RasaReply>, String>(
@@ -358,9 +466,12 @@ class RepliesNotifier extends StateNotifier<List<RasaReply>> {
   /// Return error message kalau gagal, null kalau sukses.
   Future<String?> addReply(String text) async {
     final clean = text.trim();
-    if (clean.isEmpty) return 'Tulis dulu balasanmu 💬';
+    if (clean.isEmpty) return 'Tulis dulu tanggapanmu.';
+    if (clean.length > AppConfig.maxReplyLength) {
+      return 'Maksimal ${AppConfig.maxReplyLength} karakter ya.';
+    }
     if (containsBanned(clean)) {
-      return 'Ups, ada kata yang kurang pantas 🙏';
+      return 'Ada kata yang kurang pantas.';
     }
     final s = ref.read(sessionProvider);
     final reply = RasaReply(
@@ -386,7 +497,7 @@ class RepliesNotifier extends StateNotifier<List<RasaReply>> {
         ref.read(sessionProvider.notifier).markActiveToday();
         return null;
       } catch (_) {
-        return 'Gagal kirim. Coba lagi ya.';
+        return 'Gagal mengirim. Coba lagi.';
       }
     }
 
@@ -396,6 +507,33 @@ class RepliesNotifier extends StateNotifier<List<RasaReply>> {
     return null;
   }
 
+  /// Hapus tanggapan milik sendiri (AI tidak bisa dihapus).
+  Future<void> deleteReply(String replyId, String requesterId) async {
+    RasaReply? target;
+    for (final r in state) {
+      if (r.id == replyId) target = r;
+    }
+    if (target == null || target.isAI || target.authorId != requesterId) {
+      return;
+    }
+    if (_useCloud) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('posts')
+            .doc(postId)
+            .collection('replies')
+            .doc(replyId)
+            .delete();
+        await FirebaseFirestore.instance
+            .collection('posts')
+            .doc(postId)
+            .update({'replyCount': FieldValue.increment(-1)});
+      } catch (_) {}
+    }
+    state = [for (final r in state) if (r.id != replyId) r];
+    ref.read(feedProvider.notifier).debumpReplyCount(postId);
+  }
+
   void addAiReply(String text, {required String postId}) {
     state = [
       ...state,
@@ -403,7 +541,7 @@ class RepliesNotifier extends StateNotifier<List<RasaReply>> {
         id: _uuid.v4(),
         postId: postId,
         text: text,
-        alias: '✨ RASA AI',
+        alias: kAiAlias,
         authorId: 'ai',
         createdAt: DateTime.now(),
         isAI: true,

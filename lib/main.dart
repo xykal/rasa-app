@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 import 'app.dart';
-import 'core/config/app_config.dart';
 
 /// Entry point RASA.
 /// - Firebase init dibungkus try/catch → app TETAP jalan walau belum setup.
@@ -16,17 +15,12 @@ Future<void> main() async {
     await Firebase.initializeApp();
   } catch (_) {
     // Belum ada google-services.json / belum setup → jalan mode demo lokal.
-    debugPrint('⚠️ Firebase belum dikonfigurasi, jalan dalam DEMO_MODE.');
+    debugPrint('Firebase belum dikonfigurasi, berjalan dalam mode demo.');
   }
 
   try {
     timeago.setLocaleMessages('id', timeago.IdMessages());
   } catch (_) {}
-
-  assert(
-    AppConfig.kDemoMode || AppConfig.geminiKey.isNotEmpty || true,
-    'OK',
-  );
 
   runApp(const ProviderScope(child: RasaApp()));
 }

@@ -1,7 +1,7 @@
 name: rasa
 description: RASA - Anonymous Curhat + AI Teman Healing. Social healing app (Flutter + Firebase + Gemini AI).
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

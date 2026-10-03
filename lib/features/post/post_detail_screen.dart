@@ -5,7 +5,8 @@ import '../../core/widgets/rasa_widgets.dart';
 import '../../data/models/post_model.dart';
 import '../../data/services/app_providers.dart';
 
-/// Detail postingan: curhat full + balasan AI highlight + semua balasan.
+/// Detail cerita: isi penuh + respons AI + semua tanggapan.
+/// Pemilik bisa menghapus cerita & tanggapannya sendiri.
 class PostDetailScreen extends ConsumerStatefulWidget {
   final String postId;
   const PostDetailScreen({super.key, required this.postId});
@@ -46,17 +47,55 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     _ctrl.clear();
   }
 
+  Future<void> _deletePost(RasaPost post) async {
+    final ok = await confirmDelete(
+      context,
+      'Cerita ini beserta seluruh tanggapannya akan dihapus permanen.',
+    );
+    if (!ok || !mounted) return;
+    await ref.read(feedProvider.notifier).deletePost(post.id);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cerita dihapus.')),
+    );
+  }
+
+  Future<void> _deleteReply(RasaReply reply, String myId) async {
+    final ok = await confirmDelete(context, 'Tanggapan ini akan dihapus.');
+    if (!ok) return;
+    await ref
+        .read(repliesProvider(widget.postId).notifier)
+        .deleteReply(reply.id, myId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final feed = ref.watch(feedProvider);
     final replies = ref.watch(repliesProvider(widget.postId));
+    final session = ref.watch(sessionProvider);
     final post = _find(feed);
     final scheme = Theme.of(context).colorScheme;
+    final isMine = post != null && post.authorId == session.userId;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Curhatan 💬')),
+      appBar: AppBar(
+        title: const Text('Detail Cerita'),
+        actions: [
+          if (isMine)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Hapus cerita',
+              onPressed: () => _deletePost(post),
+            ),
+        ],
+      ),
       body: post == null
-          ? const Center(child: Text('Postingan tidak ditemukan / dihapus.'))
+          ? const EmptyFeed(
+              icon: Icons.delete_outline,
+              title: 'Cerita tidak ditemukan',
+              message: 'Cerita ini mungkin sudah dihapus pemiliknya.',
+            )
           : Column(
               children: [
                 Expanded(
@@ -71,7 +110,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         onMeToo: () => ref
                             .read(feedProvider.notifier)
                             .toggleMeToo(post.id),
-                        onReport: () => showReportSheet(context, post.id),
+                        onReport: isMine
+                            ? null
+                            : () => showReportSheet(context, post.id),
                       ),
                       if (post.aiReply != null) ...[
                         const SizedBox(height: 10),
@@ -91,11 +132,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Text('✨',
-                                      style: TextStyle(fontSize: 18)),
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    size: 18,
+                                    color: scheme.onTertiaryContainer,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'RASA AI nemenin',
+                                    'Respons RASA AI',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
                                       color: scheme.onTertiaryContainer,
@@ -117,21 +161,29 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       ],
                       const SizedBox(height: 16),
                       Text(
-                        '${replies.length} balasan dari sesama manusia',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        '${replies.length} tanggapan dari komunitas',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 8),
                       if (replies.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           child: Text(
-                            'Belum ada balasan. Jadi yang pertama nemenin yuk 🫂',
+                            'Belum ada tanggapan. Jadilah yang pertama memberikan dukungan.',
                             style: TextStyle(color: scheme.onSurfaceVariant),
                           ),
                         )
                       else
                         for (final r in replies) ...[
-                          _ReplyBubble(reply: r),
+                          _ReplyBubble(
+                            reply: r,
+                            isMine:
+                                !r.isAI && r.authorId == session.userId,
+                            onDelete: () => _deleteReply(r, session.userId),
+                          ),
                           const SizedBox(height: 8),
                         ],
                     ],
@@ -148,7 +200,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             maxLines: 3,
                             minLines: 1,
                             decoration: const InputDecoration(
-                              hintText: 'Kasih kata penyemangat… 🫂',
+                              hintText: 'Tulis kata penyemangat',
                             ),
                             onSubmitted: (_) => _send(),
                           ),
@@ -177,7 +229,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
 class _ReplyBubble extends StatelessWidget {
   final RasaReply reply;
-  const _ReplyBubble({required this.reply});
+  final bool isMine;
+  final VoidCallback onDelete;
+  const _ReplyBubble({
+    required this.reply,
+    required this.isMine,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +247,7 @@ class _ReplyBubble extends StatelessWidget {
         color: isAI ? scheme.tertiaryContainer : scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: isAI
-            ? Border.all(color: scheme.tertiary.withValues(alpha: .4))
+            ? Border.all(color: scheme.tertiary.withValues(alpha: 0.4))
             : null,
       ),
       child: Column(
@@ -197,6 +255,11 @@ class _ReplyBubble extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (isAI) ...[
+                Icon(Icons.auto_awesome,
+                    size: 14, color: scheme.onTertiaryContainer),
+                const SizedBox(width: 6),
+              ],
               Expanded(
                 child: Text(
                   reply.alias,
@@ -216,6 +279,13 @@ class _ReplyBubble extends StatelessWidget {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
+              if (isMine)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Hapus tanggapan',
+                  onPressed: onDelete,
+                ),
             ],
           ),
           const SizedBox(height: 6),

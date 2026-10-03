@@ -5,7 +5,7 @@ import '../../core/config/app_config.dart';
 import '../../core/widgets/rasa_widgets.dart';
 import '../../data/services/app_providers.dart';
 
-/// Editor curhat: pilih mood → tulis → kirim → AI otomatis nemenin.
+/// Editor cerita: pilih mood → tulis → kirim → AI otomatis merespons.
 class CreatePostScreen extends ConsumerStatefulWidget {
   final String initialText;
   const CreatePostScreen({super.key, this.initialText = ''});
@@ -48,7 +48,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Curhat terkirim 🌙 AI lagi nemenin kamu…'),
+        content: Text('Cerita terkirim. AI sedang menyiapkan respons untukmu.'),
       ),
     );
   }
@@ -60,19 +60,20 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Curhat Baru 🌙'),
+        title: const Text('Cerita Baru'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: FilledButton(
+            child: FilledButton.icon(
               onPressed: _sending ? null : _send,
-              child: _sending
+              icon: _sending
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Kirim'),
+                  : const Icon(Icons.send, size: 18),
+              label: const Text('Kirim'),
             ),
           ),
         ],
@@ -82,18 +83,24 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: scheme.primaryContainer,
-                child: Text(moodEmoji(_mood)),
-              ),
+              MoodAvatar(mood: _mood, radius: 22),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('🎭 ${session.alias}',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.account_circle_outlined, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        session.alias,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
                   Text(
-                    'Posting sebagai anonim',
+                    'Diposting sebagai anonim',
                     style: TextStyle(
                         fontSize: 12, color: scheme.onSurfaceVariant),
                   ),
@@ -102,14 +109,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Text('Mood kamu sekarang?',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
+          const SectionTitle('Mood kamu saat ini?'),
           MoodPicker(
             selected: _mood,
             onPick: (m) => setState(() => _mood = m),
           ),
           const SizedBox(height: 16),
+          const SectionTitle('Ceritamu'),
           TextField(
             controller: _ctrl,
             maxLines: 8,
@@ -117,7 +123,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             autofocus: true,
             decoration: const InputDecoration(
               hintText:
-                  'Tulis isi hatimu di sini…\n\nNggak ada yang nge-judge. Semua aman. 💜',
+                  'Tulis isi hatimu di sini. Tidak ada penilaian, semuanya aman.',
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -125,16 +131,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: scheme.tertiaryContainer.withValues(alpha: .5),
+              color: scheme.tertiaryContainer.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
-                const Text('✨', style: TextStyle(fontSize: 20)),
+                Icon(Icons.auto_awesome, color: scheme.tertiary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Begitu terkirim, RASA AI bakal langsung nemenin + komunitas bisa kasih peluk.',
+                    'Setelah terkirim, RASA AI akan langsung merespons dan komunitas dapat memberikan dukungan.',
                     style: TextStyle(
                       fontSize: 13,
                       color: scheme.onSurfaceVariant,

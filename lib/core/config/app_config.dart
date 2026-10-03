@@ -1,87 +1,122 @@
+import 'package:flutter/material.dart';
+
 /// RASA - Satu file config buat semua.
 ///
-/// Cara pakai (gampang buat buyer):
 /// - Demo tanpa Firebase : langsung `flutter run` (default DEMO_MODE=true)
 /// - Production          : flutter build apk --dart-define=DEMO_MODE=false
-/// - API key Gemini      : --dart-define=GEMINI_KEY=xxx (atau isi manual di bawah)
+/// - API key Gemini      : --dart-define=GEMINI_KEY=xxx
 library;
 
 class AppConfig {
   AppConfig._();
 
   static const String appName = 'RASA';
-  static const String tagline = 'Curhat anonim, ditemani AI & sesama manusia';
+  static const String tagline = 'Ruang aman untuk bercerita secara anonim';
+  static const String version = '1.1.0';
+  static const String supportEmail = 'halo@rasa.app';
 
   /// true = jalan TANPA Firebase (data dummy lokal). Cocok buat demo & review buyer.
   static const bool kDemoMode =
       bool.fromEnvironment('DEMO_MODE', defaultValue: true);
 
   /// API key Gemini (https://aistudio.google.com).
-  /// Kalau kosong -> app pakai balasan empati bawaan (tetap jalan, tanpa AI).
+  /// Kalau kosong -> app pakai balasan bawaan (tetap jalan, tanpa AI).
   static const String geminiKey =
       String.fromEnvironment('GEMINI_KEY', defaultValue: '');
 
-  /// Batas karakter curhat (disamakan dengan firestore.rules = 500)
+  /// Batas karakter (disamakan dengan firestore.rules = 500)
   static const int maxPostLength = 280;
   static const int maxReplyLength = 280;
+  static const int maxAliasLength = 24;
+
+  /// Durasi Biliar Chat dalam detik.
+  static const int biliarDurationSec = 300;
 }
 
-/// Model mood — dipakai di onboarding, feed filter, & create post.
+/// Model mood — ikon + warna konsisten di seluruh aplikasi.
 class RasaMood {
   final String id;
-  final String emoji;
+  final IconData icon;
   final String label;
-  const RasaMood(this.id, this.emoji, this.label);
+  final Color color;
+  const RasaMood(this.id, this.icon, this.label, this.color);
 }
 
 const List<RasaMood> kMoods = [
-  RasaMood('hancur', '😭', 'Hancur'),
-  RasaMood('sedih', '😔', 'Sedih'),
-  RasaMood('flat', '😐', 'Flat'),
-  RasaMood('lumayan', '🙂', 'Lumayan'),
-  RasaMood('seneng', '🤩', 'Seneng'),
+  RasaMood(
+      'hancur', Icons.sentiment_very_dissatisfied, 'Hancur', Color(0xFFE5484D)),
+  RasaMood(
+      'sedih', Icons.sentiment_dissatisfied, 'Sedih', Color(0xFFF76B15)),
+  RasaMood('flat', Icons.sentiment_neutral, 'Biasa', Color(0xFF8E8C99)),
+  RasaMood(
+      'lumayan', Icons.sentiment_satisfied, 'Lumayan', Color(0xFF46A758)),
+  RasaMood(
+      'seneng', Icons.sentiment_very_satisfied, 'Senang', Color(0xFF6C4CF1)),
 ];
 
-String moodEmoji(String id) =>
-    kMoods.firstWhere((m) => m.id == id, orElse: () => kMoods[2]).emoji;
+RasaMood moodOf(String id) =>
+    kMoods.firstWhere((m) => m.id == id, orElse: () => kMoods[2]);
 
 /// Pertanyaan harian biar feed rame terus (diputar per hari).
 const List<String> kDailyQuestions = [
-  'Hal kecil apa yang bikin lu seneng hari ini?',
-  'Kalau bisa ngomong ke diri sendiri 1 tahun lalu, lu mau bilang apa?',
-  'Lagu apa yang lagi on-repeat di kepala lu minggu ini?',
-  'Satu hal yang pengen lu syukuri malam ini, apa?',
-  'Ceritain satu momen minggu ini yang nggak bakal lu lupain.',
-  'Kalau besok libur total tanpa HP, lu mau ngapain?',
-  'Siapa orang yang paling pengen lu peluk sekarang? Kenapa?',
+  'Hal kecil apa yang membuatmu senang hari ini?',
+  'Jika bisa berbicara dengan dirimu satu tahun lalu, apa yang ingin kamu sampaikan?',
+  'Lagu apa yang sedang terngiang di kepalamu minggu ini?',
+  'Satu hal yang ingin kamu syukuri malam ini, apa?',
+  'Ceritakan satu momen minggu ini yang tidak akan kamu lupakan.',
+  'Jika besok libur total tanpa gawai, kamu ingin melakukan apa?',
+  'Siapa orang yang paling ingin kamu peluk saat ini? Mengapa?',
 ];
 
-/// Filter kata kasar sederhana (lapis 1 di client, lapis 2 di moderasi admin).
-/// Buyer bisa tambah sendiri. Cek: _containsBannedWord() di providers.
+/// Filter kata kasar (lapis 1 di client, lapis 2 di moderasi admin).
 const List<String> kBannedWords = [
   'anjing',
   'bangsat',
   'babi',
   'tolol',
   'goblok',
+  'goblog',
   'kontol',
   'memek',
   'bajingan',
   'kampret',
   'brengsek',
+  'asu',
+  'jancuk',
+  'bego',
+  'idiot',
+  'lonte',
+  'pantek',
+];
+
+/// Saran cepat di AI Chat.
+const List<String> kQuickPrompts = [
+  'Saya merasa lelah sekali',
+  'Berikan saya semangat',
+  'Saya sedang overthinking',
+  'Hari ini menyenangkan',
+];
+
+/// Alasan laporan konten.
+const List<String> kReportReasons = [
+  'Ujaran kebencian / perundungan',
+  'Spam / promosi',
+  'Konten dewasa',
+  'Berpotensi membahayakan diri sendiri / orang lain',
+  'Lainnya',
 ];
 
 /// Balasan empati bawaan — dipakai kalau GEMINI_KEY kosong / offline.
 /// Biar buyer tetap bisa demo fitur "AI reply" tanpa keluar modal.
 const List<String> kCannedAiReplies = [
-  'Denger ceritamu berasa berat banget ya. Makasih udah berani cerita di sini, itu langkah yang gede lho. Mau cerita lebih lanjut? Aku dengerin. 🫂',
-  'Wah, kebayang capeknya jadi kamu hari ini. Perasaan kayak gitu tuh valid banget. Pelan-pelan aja ya, kamu nggak sendirian. 💛',
-  'Makasih udah jujur sama perasaanmu. Kadang nulis aja udah bikin lega sedikit kan? Kalau mau, ceritain bagian yang paling ganggu pikiranmu malam ini.',
-  'Aku nggak bisa ngerasain persisnya, tapi aku di sini buat nemenin. Kamu udah kuat banget bisa lewatin hari ini. Besok kita hadapin bareng ya. 🌙',
-  'Cerita kayak gini butuh keberanian. Kamu hebat. Coba tarik napas 3x… terus inget: hari yang berat bukan berarti hidup yang berat. ✨',
+  'Terima kasih sudah berani bercerita di sini. Apa yang kamu rasakan saat ini valid dan wajar. Jika berkenan, ceritakan lebih lanjut, saya akan mendengarkan.',
+  'Terdengar seperti hari yang berat. Tidak apa-apa merasa lelah, istirahat juga bagian dari proses. Pelan-pelan saja, kamu tidak sendirian.',
+  'Apresiasi untuk kejujuranmu. Kadang menuliskan perasaan saja sudah sedikit melegakan. Bagian mana yang paling mengganggumu? Mungkin bisa kita uraikan bersama.',
+  'Saya tidak bisa merasakan persisnya, tetapi saya di sini untuk menemanimu. Kamu sudah kuat melewati hari ini. Mari hadapi esok hari satu langkah demi satu langkah.',
+  'Bercerita seperti ini membutuhkan keberanian, dan kamu sudah melakukannya. Coba tarik napas dalam tiga kali, lalu ingat: hari yang berat bukan berarti hidup yang berat.',
 ];
 
-/// Nama samaran random biar anonim tapi tetap hangat & lucu.
+/// Nama samaran acak biar anonim tapi tetap hangat.
 const List<String> kAnonAliases = [
   'Kucing Galau',
   'Kopi Susu',

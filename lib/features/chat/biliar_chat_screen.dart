@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../data/models/post_model.dart';
 
-/// BILIAR CHAT — ngobrol anonim random 1-on-1 selama 5 menit.
+/// BILIAR CHAT — mengobrol anonim acak 1-on-1 dengan batas waktu.
 ///
-/// VERSI MVP: lawan bicara disimulasikan (bot hangat) biar buyer bisa demo
+/// VERSI MVP: lawan bicara disimulasikan biar buyer bisa demo
 /// tanpa butuh 2 HP / server matchmaking.
 /// TODO PRODUCTION (didokumentasikan di SETUP.md):
 ///   koleksi `queue` + `rooms` di Firestore buat matchmaking real-time
-///   antar 2 user. Struktur room sudah disiapkan di bawah (roomId, dsb).
+///   antar 2 user.
 class BiliarChatScreen extends StatefulWidget {
   const BiliarChatScreen({super.key});
 
@@ -30,23 +30,23 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
   final _scroll = ScrollController();
   final _rnd = Random();
   Timer? _botTimer;
-  int _secondsLeft = 300;
+  int _secondsLeft = AppConfig.biliarDurationSec;
 
   static const _botReplies = [
-    'Wah relate banget, aku juga pernah di posisi itu 🫂',
-    'Terus gimana perasaanmu sekarang soal itu?',
-    'Gila ya, ternyata banyak yang ngerasain hal sama di sini.',
-    'Makasih udah cerita sejujur itu. Lanjutin, aku dengerin 👀',
-    'Kalau aku di posisimu mungkin juga bakal ngerasa gitu sih.',
-    'Eh tapi kamu hebat lho masih bisa cerita dengan tenang ✨',
-    'Haha iya juga ya. Kadang hal random gitu yang paling nempel di kepala.',
-    'Semangat ya, kita sama-sama berjuang di sini 💪',
+    'Saya paham sekali, pernah berada di posisi yang sama.',
+    'Lalu bagaimana perasaanmu sekarang tentang hal itu?',
+    'Ternyata banyak juga yang merasakan hal serupa di sini ya.',
+    'Terima kasih sudah bercerita sejujur itu. Silakan lanjut, saya mendengarkan.',
+    'Kalau saya di posisimu, mungkin akan merasa begitu juga.',
+    'Kamu hebat, masih bisa bercerita dengan tenang seperti ini.',
+    'Iya juga ya. Kadang hal kecil justru paling membekas.',
+    'Tetap semangat ya, kita sama-sama berjuang di sini.',
   ];
 
   static const _openers = [
-    'Halo! Akhirnya match juga 😄 lagi ngerasa apa nih malam ini?',
-    'Haii, salam kenal! Aku lagi gabut, kamu gimana?',
-    'Yo! Match pertama hari ini. Cerita random apa aja boleh~',
+    'Halo! Akhirnya terhubung juga. Malam ini kamu merasa bagaimana?',
+    'Hai, salam kenal. Saya sedang senggang, kamu bagaimana?',
+    'Halo! Senang bisa mengobrol. Cerita apa saja boleh di sini.',
   ];
 
   @override
@@ -67,9 +67,8 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
       if (!mounted || _phase != _Phase.searching) return;
       setState(() {
         _phase = _Phase.chatting;
-        _partner =
-            kAnonAliases[_rnd.nextInt(kAnonAliases.length)];
-        _secondsLeft = 300;
+        _partner = kAnonAliases[_rnd.nextInt(kAnonAliases.length)];
+        _secondsLeft = AppConfig.biliarDurationSec;
         _msgs.add(ChatMsg(
           _openers[_rnd.nextInt(_openers.length)],
           false,
@@ -96,8 +95,8 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(timeout
-            ? '⏰ Waktu biliar habis. Makasih udah nemenin $_partner!'
-            : 'Obrolan selesai. Semoga harimu lebih ringan 🌙'),
+            ? 'Waktu mengobrol habis. Terima kasih sudah menemani $_partner.'
+            : 'Obrolan selesai. Semoga harimu terasa lebih ringan.'),
       ),
     );
   }
@@ -108,7 +107,7 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
     _ctrl.clear();
     setState(() => _msgs.add(ChatMsg(text, true, DateTime.now())));
     _toBottom();
-    // Balasan bot dengan jeda natural
+    // Balasan simulasi dengan jeda natural
     Future.delayed(Duration(milliseconds: 1200 + _rnd.nextInt(1500)), () {
       if (!mounted || _phase != _Phase.chatting) return;
       setState(() => _msgs.add(ChatMsg(
@@ -142,13 +141,17 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Biliar Chat 🎲'),
+        title: const Text('Biliar Chat'),
         actions: [
           if (_phase == _Phase.chatting)
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Chip(
-                avatar: const Text('⏰'),
+                avatar: Icon(
+                  Icons.timer_outlined,
+                  size: 16,
+                  color: scheme.primary,
+                ),
                 label: Text(_timerText),
                 visualDensity: VisualDensity.compact,
               ),
@@ -177,18 +180,20 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
                 color: scheme.primaryContainer,
                 borderRadius: BorderRadius.circular(32),
               ),
-              child: const Center(
-                child: Text('🎲', style: TextStyle(fontSize: 56)),
+              child: Icon(
+                Icons.casino,
+                size: 56,
+                color: scheme.onPrimaryContainer,
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'Ngobrol Random 5 Menit',
+              'Ngobrol Acak 5 Menit',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
-              'Ditemuin sama orang asing yang anonim.\nNggak cocok? Tinggal akhiri, nggak ada baper.',
+              'Dipertemukan dengan orang asing yang anonim.\nTidak cocok? Akhiri kapan pun, tanpa drama.',
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant, height: 1.5),
             ),
@@ -196,7 +201,7 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
             FilledButton.icon(
               onPressed: _startSearch,
               icon: const Icon(Icons.shuffle),
-              label: const Text('Cari Teman Biliar'),
+              label: const Text('Cari Teman Mengobrol'),
             ),
           ],
         ),
@@ -212,13 +217,13 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
           const CircularProgressIndicator(),
           const SizedBox(height: 20),
           const Text(
-            'Lagi nyari temen ngobrol…',
+            'Mencari teman mengobrol',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           TextButton(
             onPressed: _cancelSearch,
-            child: const Text('Batalin'),
+            child: const Text('Batalkan'),
           ),
         ],
       ),
@@ -238,7 +243,10 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
           ),
           child: Row(
             children: [
-              const Text('🎭', style: TextStyle(fontSize: 20)),
+              Icon(
+                Icons.account_circle_outlined,
+                color: scheme.onSecondaryContainer,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -300,7 +308,7 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
                   child: TextField(
                     controller: _ctrl,
                     decoration: const InputDecoration(
-                      hintText: 'Sapa dia…',
+                      hintText: 'Sapa dia',
                     ),
                     onSubmitted: (_) => _send(),
                   ),

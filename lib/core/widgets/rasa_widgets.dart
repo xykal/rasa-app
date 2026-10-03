@@ -13,7 +13,72 @@ String timeId(DateTime dt) {
   }
 }
 
-/// Pilihan mood berbentuk chip — dipakai di onboarding & bikin post.
+/// Logo brand RASA — gradient + ikon, dipakai di splash, onboarding, appbar.
+class RasaLogo extends StatelessWidget {
+  final double size;
+  const RasaLogo({super.key, this.size = 48});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [scheme.primary, scheme.tertiary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(size * 0.3),
+      ),
+      child: Icon(
+        Icons.spa,
+        color: scheme.onPrimary,
+        size: size * 0.55,
+      ),
+    );
+  }
+}
+
+/// Avatar mood berwarna — konsisten di feed, detail, dan editor.
+class MoodAvatar extends StatelessWidget {
+  final String mood;
+  final double radius;
+  const MoodAvatar({super.key, required this.mood, this.radius = 20});
+
+  @override
+  Widget build(BuildContext context) {
+    final m = moodOf(mood);
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: m.color.withValues(alpha: 0.15),
+      child: Icon(m.icon, color: m.color, size: radius * 1.1),
+    );
+  }
+}
+
+/// Judul seksi kecil yang konsisten di semua layar.
+class SectionTitle extends StatelessWidget {
+  final String text;
+  const SectionTitle(this.text, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: Theme.of(context)
+            .textTheme
+            .titleMedium
+            ?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+/// Pilihan mood berbentuk chip — dipakai di onboarding & bikin cerita.
 class MoodPicker extends StatelessWidget {
   final String? selected;
   final ValueChanged<String> onPick;
@@ -27,7 +92,8 @@ class MoodPicker extends StatelessWidget {
       children: [
         for (final m in kMoods)
           ChoiceChip(
-            label: Text('${m.emoji} ${m.label}'),
+            avatar: Icon(m.icon, size: 18, color: m.color),
+            label: Text(m.label),
             selected: selected == m.id,
             onSelected: (_) => onPick(m.id),
           ),
@@ -36,16 +102,16 @@ class MoodPicker extends StatelessWidget {
   }
 }
 
-/// Tombol Peluk / Sama dengan animasi angka.
+/// Tombol reaksi (Peluk / Sama) dengan ikon Material + animasi angka.
 class HugButton extends StatelessWidget {
-  final String emoji;
+  final IconData icon;
   final String label;
   final int count;
   final bool active;
   final VoidCallback onTap;
   const HugButton({
     super.key,
-    required this.emoji,
+    required this.icon,
     required this.label,
     required this.count,
     required this.active,
@@ -55,6 +121,7 @@ class HugButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final fg = active ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
     return InkWell(
       borderRadius: BorderRadius.circular(999),
       onTap: onTap,
@@ -62,20 +129,18 @@ class HugButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+          color:
+              active ? scheme.primaryContainer : scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 16)),
+            Icon(icon, size: 16, color: fg),
             const SizedBox(width: 6),
             Text(
               '$label • $count',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: active ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w700, color: fg),
             ),
           ],
         ),
@@ -84,7 +149,7 @@ class HugButton extends StatelessWidget {
   }
 }
 
-/// Kartu postingan curhat — dipakai di feed & profil.
+/// Kartu cerita — dipakai di feed & profil.
 class RasaPostCard extends StatelessWidget {
   final RasaPost post;
   final VoidCallback? onTap;
@@ -114,13 +179,7 @@ class RasaPostCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: scheme.primaryContainer,
-                    child: Text(
-                      moodEmoji(post.mood),
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                  ),
+                  MoodAvatar(mood: post.mood),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -142,18 +201,30 @@ class RasaPostCard extends StatelessWidget {
                   ),
                   if (post.aiReply != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: scheme.tertiaryContainer,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(
-                        '✨ AI nemenin',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onTertiaryContainer,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 12,
+                            color: scheme.onTertiaryContainer,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Ditemani AI',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onTertiaryContainer,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   if (onReport != null)
@@ -173,22 +244,28 @@ class RasaPostCard extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   HugButton(
-                    emoji: '🫂',
+                    icon: Icons.volunteer_activism,
                     label: 'Peluk',
                     count: post.hugCount,
                     active: post.hugged,
                     onTap: onHug ?? () {},
                   ),
                   HugButton(
-                    emoji: '🥺',
+                    icon: Icons.groups,
                     label: 'Sama',
                     count: post.meTooCount,
                     active: post.meToo,
                     onTap: onMeToo ?? () {},
                   ),
                   const SizedBox(width: 4),
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 14,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
                   Text(
-                    '💬 ${post.replyCount} balasan',
+                    '${post.replyCount} tanggapan',
                     style: TextStyle(color: scheme.onSurfaceVariant),
                   ),
                 ],
@@ -228,14 +305,24 @@ class DailyQuestionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '❓ PERTANYAAN HARI INI',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1,
-              color: scheme.onPrimary.withValues(alpha: .85),
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.lightbulb_outline,
+                size: 16,
+                color: scheme.onPrimary.withValues(alpha: 0.85),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'PERTANYAAN HARI INI',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                  color: scheme.onPrimary.withValues(alpha: 0.85),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -250,7 +337,7 @@ class DailyQuestionCard extends StatelessWidget {
           const SizedBox(height: 12),
           FilledButton.tonal(
             onPressed: onAnswer,
-            child: const Text('Jawab sekarang ✨'),
+            child: const Text('Jawab Sekarang'),
           ),
         ],
       ),
@@ -258,23 +345,44 @@ class DailyQuestionCard extends StatelessWidget {
   }
 }
 
-/// Tampilan kosong saat feed belum ada isi / filter tidak cocok.
+/// Status kosong yang informatif — dipakai di feed, pencarian, & profil.
 class EmptyFeed extends StatelessWidget {
+  final IconData icon;
+  final String title;
   final String message;
-  const EmptyFeed({super.key, this.message = 'Belum ada curhatan di sini.\nJadi yang pertama cerita yuk 🌙'});
+  const EmptyFeed({
+    super.key,
+    this.icon = Icons.forum_outlined,
+    this.title = 'Belum ada cerita',
+    this.message = 'Jadilah yang pertama berbagi di sini.',
+  });
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            height: 1.6,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 56, color: scheme.outline),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                height: 1.6,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -291,24 +399,20 @@ Future<void> showReportSheet(BuildContext context, String postId) {
         mainAxisSize: MainAxisSize.min,
         children: [
           const ListTile(
-            title: Text('Laporkan postingan ini?'),
-            subtitle: Text('Tim moderasi bakal meninjau dalam 1x24 jam.'),
+            leading: Icon(Icons.flag_outlined),
+            title: Text('Laporkan cerita ini?'),
+            subtitle: Text('Tim moderasi akan meninjau dalam 1x24 jam.'),
           ),
-          for (final r in const [
-            'Ujaran kebencian / toxic',
-            'Spam / promosi',
-            'Konten dewasa',
-            'Bahaya (self-harm / kekerasan)',
-            'Lainnya',
-          ])
+          for (final r in kReportReasons)
             ListTile(
-              leading: const Icon(Icons.flag_outlined),
+              leading: const Icon(Icons.chevron_right),
               title: Text(r),
               onTap: () {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Makasih laporannya 🙏 Bakal kami tinjau.'),
+                    content: Text(
+                        'Terima kasih. Laporanmu akan kami tinjau.'),
                   ),
                 );
               },
@@ -318,4 +422,27 @@ Future<void> showReportSheet(BuildContext context, String postId) {
       ),
     ),
   );
+}
+
+/// Dialog konfirmasi hapus yang standar di seluruh aplikasi.
+Future<bool> confirmDelete(BuildContext context, String message) async {
+  final res = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      icon: const Icon(Icons.delete_outline),
+      title: const Text('Hapus?'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Hapus'),
+        ),
+      ],
+    ),
+  );
+  return res ?? false;
 }

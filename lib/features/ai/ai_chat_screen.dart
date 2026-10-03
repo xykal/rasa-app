@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/app_config.dart';
 import '../../data/models/post_model.dart';
 import '../../data/services/gemini_service.dart';
 
-/// Chat 1-on-1 dengan RASA AI — teman ngobrol yang selalu ada.
-/// Jalan offline pakai balasan bawaan, makin pinter kalau GEMINI_KEY diisi.
+/// Chat 1-on-1 dengan RASA AI — teman mengobrol yang selalu ada.
+/// Jalan offline pakai balasan bawaan, makin pintar kalau GEMINI_KEY diisi.
 class AiChatScreen extends ConsumerStatefulWidget {
   const AiChatScreen({super.key});
 
@@ -18,7 +19,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   final _scroll = ScrollController();
   final List<ChatMsg> _msgs = [
     ChatMsg(
-      'Hai, aku RASA AI ✨ Teman ngobrolmu kapan pun. Lagi ngerasa apa malam ini? Cerita aja, semua aman di sini.',
+      'Halo, saya RASA AI. Teman mengobrol yang siap mendengarkan kapan pun. Apa yang sedang kamu rasakan saat ini?',
       false,
       DateTime.now(),
     ),
@@ -44,8 +45,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     });
   }
 
-  Future<void> _send() async {
-    final text = _ctrl.text.trim();
+  Future<void> _send([String? preset]) async {
+    final text = (preset ?? _ctrl.text).trim();
     if (text.isEmpty || _typing) return;
     _ctrl.clear();
     setState(() {
@@ -82,7 +83,11 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text('✨', style: TextStyle(fontSize: 18)),
+              child: Icon(
+                Icons.auto_awesome,
+                size: 18,
+                color: scheme.onPrimary,
+              ),
             ),
             const SizedBox(width: 10),
             const Expanded(
@@ -91,7 +96,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 children: [
                   Text('RASA AI',
                       style: TextStyle(fontWeight: FontWeight.w800)),
-                  Text('Selalu online buat kamu',
+                  Text('Selalu siap mendengarkan',
                       style: TextStyle(fontSize: 12)),
                 ],
               ),
@@ -110,9 +115,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                 color: scheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Text(
-                '💡 Mode hemat: AI bawaan (offline). Isi GEMINI_KEY biar makin pinter.',
-                style: TextStyle(fontSize: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Mode hemat: respons bawaan (offline). Isi GEMINI_KEY agar semakin pintar.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
               ),
             ),
           Expanded(
@@ -132,7 +149,21 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                         color: scheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: const Text('nulis… ✨'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: scheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('Mengetik'),
+                        ],
+                      ),
                     ),
                   );
                 }
@@ -180,22 +211,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                for (final s in const [
-                  'Aku capek banget 😔',
-                  'Kasih semangat dong ✨',
-                  'Aku overthinking nih',
-                  'Hari ini seru banget!',
-                ])
+                for (final s in kQuickPrompts)
                   Padding(
                     padding: const EdgeInsets.only(right: 8, bottom: 8),
                     child: ActionChip(
+                      avatar: const Icon(Icons.north_east, size: 16),
                       label: Text(s),
-                      onPressed: _typing
-                          ? null
-                          : () {
-                              _ctrl.text = s;
-                              _send();
-                            },
+                      onPressed: _typing ? null : () => _send(s),
                     ),
                   ),
               ],
@@ -210,7 +232,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                     child: TextField(
                       controller: _ctrl,
                       decoration: const InputDecoration(
-                        hintText: 'Cerita apa aja…',
+                        hintText: 'Ceritakan apa saja',
                       ),
                       onSubmitted: (_) => _send(),
                     ),

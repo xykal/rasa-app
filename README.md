@@ -22,6 +22,10 @@ Aplikasi social-healing: user curhat 100% anonim → langsung dibalas **AI empat
 | 🔥 Streak & profil | Streak harian, statistik peluk, riwayat curhat sendiri |
 | 🛡️ Moderasi | Filter kata kasar client-side + `firestore.rules` + koleksi `reports` |
 | 📦 Demo mode | **Langsung jalan tanpa Firebase** — cocok buat review buyer |
+| 🔍 Pencarian | Cari cerita / nama samaran langsung dari feed |
+| 🌓 Tema | Terang / Gelap / Auto, tersimpan otomatis |
+| 🗑️ Kelola konten | Hapus cerita & tanggapan milik sendiri |
+| 👋 Splash screen | Branding saat aplikasi dimuat |
 
 ## 🚀 Coba 2 Menit (Tanpa Firebase)
 
