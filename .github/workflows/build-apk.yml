@@ -1,0 +1,116 @@
+name: Build APK
+
+# Otomatis build tiap push ke main + bisa manual via tombol "Run workflow"
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-debug:
+    name: Build Debug APK (Demo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - run: flutter --version
+
+      # Generate folder android/ios/web otomatis (biar repo tetap ramping)
+      - name: Generate platform folders
+        run: flutter create . --project-name rasa --org com.rasa.app
+
+      # google-services.json: ambil dari Secret kalau ada, kalau tidak pakai dummy
+      # biar build demo tetap lolos. App tetap jalan (mode demo lokal).
+      - name: Inject google-services.json
+        run: |
+          if [ -n "${{ secrets.ANDROID_GOOGLE_SERVICES }}" ]; then
+            echo "${{ secrets.ANDROID_GOOGLE_SERVICES }}" | base64 -d > android/app/google-services.json
+            echo "✅ pakai google-services.json dari Secret"
+          else
+            echo "⚠️ Secret ANDROID_GOOGLE_SERVICES kosong → pakai dummy buat build demo"
+            cat > android/app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "rasa-demo",
+              "storage_bucket": "rasa-demo.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                  "android_client_info": { "package_name": "com.rasa.app" }
+                },
+                "oauth_client": [],
+                "api_key": [{ "current_key": "AIzaSyDummyKeyForDemoBuildOnly0000000" }],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
+      - run: flutter pub get
+      - run: flutter analyze || true
+
+      - name: Build debug APK
+        run: flutter build apk --debug --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rasa-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+
+  build-release:
+    name: Build Release APK (Production)
+    runs-on: ubuntu-latest
+    # Hanya jalan kalau sudah setup keystore (ada secret KEYSTORE_BASE64)
+    if: ${{ vars.ENABLE_RELEASE == 'true' }}
+    needs: build-debug
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - run: flutter create . --project-name rasa --org com.rasa.app
+      - name: Inject google-services.json
+        run: echo "${{ secrets.ANDROID_GOOGLE_SERVICES }}" | base64 -d > android/app/google-services.json
+      - name: Inject keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
+          cat > android/key.properties <<'EOF'
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          EOF
+      - run: flutter pub get
+      - name: Build release APK + AppBundle
+        run: |
+          flutter build apk --release --dart-define=DEMO_MODE=false --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+          flutter build appbundle --release --dart-define=DEMO_MODE=false --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rasa-release
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
