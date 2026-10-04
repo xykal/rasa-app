@@ -12,6 +12,9 @@ fi
 
 # 1. resource Android (ikon + splash + warna)
 cp -rf branding/android/res/. android/app/src/main/res/
+# 1b. buang sisa template yg tidak dipakai lagi (referensi gradasi lama)
+rm -f android/app/src/main/res/drawable/ic_launcher_background.xml \
+      android/app/src/main/res/drawable-night/ic_launcher_background.xml
 echo "android res dipasang"
 
 # 2. label aplikasi
