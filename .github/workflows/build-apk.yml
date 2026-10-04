@@ -69,13 +69,13 @@ jobs:
       - run: flutter analyze || true
 
       - name: Build debug APK
-        run: flutter build apk --debug --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }} --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+        run: flutter build apk --debug --split-per-abi --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }} --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: rasa-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: build/app/outputs/flutter-apk/app-*-debug.apk
 
   build-release:
     name: Build Release APK (Production)
@@ -108,11 +108,11 @@ jobs:
       - run: flutter pub get
       - name: Build release APK + AppBundle
         run: |
-          flutter build apk --release --dart-define=DEMO_MODE=false --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }} --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+          flutter build apk --release --split-per-abi --dart-define=DEMO_MODE=false --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }} --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
           flutter build appbundle --release --dart-define=DEMO_MODE=false --dart-define=ONESIGNAL_APP_ID=${{ secrets.ONESIGNAL_APP_ID }} --dart-define=GEMINI_KEY=${{ secrets.GEMINI_KEY }}
       - uses: actions/upload-artifact@v4
         with:
           name: rasa-release
           path: |
-            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/app-*-release.apk
             build/app/outputs/bundle/release/app-release.aab
