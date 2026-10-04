@@ -605,7 +605,7 @@ class RasaChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
         decoration: BoxDecoration(
           color: selected ? scheme.primary : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(RasaRadii.chip),
+          borderRadius: BorderRadius.circular(RasaRadii.button),
           boxShadow: selected ? RasaShadows.glow(scheme) : null,
         ),
         child: Row(
