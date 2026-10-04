@@ -33,6 +33,10 @@ cat > "$APP_DIR/proguard-rules.pro" <<'EOF'
 -keep class * implements com.google.gson.TypeAdapter { *; }
 -keep class * implements com.google.gson.JsonSerializer { *; }
 -keep class * implements com.google.gson.JsonDeserializer { *; }
+# Play Core splitcompat: direferensikan Flutter embedding (deferred components)
+# tapi tidak dipakai app ini — aman diabaikan (fix resmi R8 + Flutter).
+-dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+-dontwarn com.google.android.play.core.splitinstall.SplitInstallException
 EOF
 echo "proguard-rules.pro ditulis"
 
