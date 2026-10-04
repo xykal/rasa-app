@@ -18,6 +18,8 @@ dependencies:
   firebase_messaging: ^15.1.5
   # AI Teman Healing
   google_generative_ai: ^0.4.6
+  # Push notification
+  onesignal_flutter: ^5.0.0
   # Utils
   timeago: ^3.7.0
   uuid: ^4.5.1

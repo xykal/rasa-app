@@ -26,6 +26,7 @@ Aplikasi social-healing: user curhat 100% anonim → langsung dibalas **AI empat
 | 🌓 Tema | Terang / Gelap / Auto, tersimpan otomatis |
 | 🗑️ Kelola konten | Hapus cerita & tanggapan milik sendiri |
 | 👋 Splash screen | Branding saat aplikasi dimuat |
+| 🔔 Notifikasi | OneSignal push — klik notif langsung buka cerita |
 
 ## 🚀 Coba 2 Menit (Tanpa Firebase)
 

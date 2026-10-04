@@ -87,6 +87,7 @@ Biar tiap push ke `main` menghasilkan APK release signed otomatis:
 |---|---|---|
 | `ANDROID_GOOGLE_SERVICES` | base64 dari `google-services.json` | `base64 -w0 android/app/google-services.json` |
 | `GEMINI_KEY` | API key Gemini | paste biasa |
+| `ONESIGNAL_APP_ID` | App ID OneSignal aplikasi RASA | paste biasa |
 | `KEYSTORE_BASE64` | base64 file `.jks` | `base64 -w0 ~/rasa-upload.jks` |
 | `KEYSTORE_PASSWORD` | password keystore | paste biasa |
 | `KEY_PASSWORD` | password key | paste biasa |
@@ -108,9 +109,61 @@ MVP sekarang pakai simulasi bot (biar bisa demo 1 HP). Buat real 2-user:
 
 Estimasi: 1–2 hari kerja. Struktur `roomId` sudah disiapkan komentarnya di `biliar_chat_screen.dart`.
 
-## 8. Notifikasi "Ada yang memelukmu 🫂" (Opsional, +Nilai Jual)
+## 8. Notifikasi Push (OneSignal)
 
-Termudah: Cloud Function trigger `onUpdate` di `posts` — kalau `hugCount` naik → kirim FCM ke `authorId`. Butuh simpan FCM token di `users/{uid}.fcmToken` (tambah 10 baris di `SessionNotifier`, paket `firebase_messaging` sudah ada di pubspec).
+RASA memakai **OneSignal** untuk push: "ceritamu dipeluk", "ada tanggapan baru", dll. Klik notif → langsung buka cerita terkait.
+
+### 8.1 Bikin aplikasi OneSignal baru (wajib baru)
+
+1. Buka [onesignal.com](https://onesignal.com) → New App → nama `RASA`.
+2. Platform **Google Android (FCM)** → ikuti wizard: boleh pakai Firebase project yang sama dengan section 3 → masukkan kredensial **FCM V1** (service account JSON).
+3. Copy **App ID** (Settings → Keys & IDs).
+4. Copy **REST API Key** — ini RAHASIA, hanya untuk server/worker, jangan masuk aplikasi.
+
+> PENTING: jangan reuse App ID / API key dari aplikasi lain. Key OneSignal terikat per-app dan tidak bisa ditukar antar-app.
+
+### 8.2 Pasang App ID
+
+Lokal:
+
+```bash
+flutter run --dart-define=ONESIGNAL_APP_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+Production/CI: isi GitHub Secret `ONESIGNAL_APP_ID` (workflow otomatis mempassingnya saat build).
+
+Tanpa App ID pun app tetap jalan normal — modul push nonaktif sendiri (aman buat demo).
+
+Cara kerja di kode:
+
+- `lib/data/services/onesignal_service.dart` — init SDK, minta izin, handle klik notif.
+- Saat session siap, user anonim didaftarkan sebagai `external_id` + tag alias (`app.dart`).
+- `navigatorKey` global biar notif bisa buka `PostDetailScreen` dari background.
+
+### 8.3 Kirim push dari server (relay worker)
+
+Pengiriman push TIDAK dilakukan dari aplikasi (REST API key tidak boleh di client). Pakai worker Cloudflare di `notify-worker/`:
+
+```bash
+cd notify-worker
+cp wrangler.toml.example wrangler.toml
+npx wrangler login
+npx wrangler secret put ONESIGNAL_APP_ID
+npx wrangler secret put ONESIGNAL_API_KEY
+npx wrangler secret put NOTIFY_SECRET
+npx wrangler deploy
+```
+
+Panggil worker tiap ada event (peluk/tanggapan baru) dari backend/Cloud Function-mu:
+
+```bash
+curl -X POST https://rasa-notify.kamu.workers.dev/ \
+  -H "Authorization: Bearer $NOTIFY_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"toUserId":"<uid penulis cerita>","title":"RASA","message":"Seseorang memeluk ceritamu","postId":"<id cerita>"}'
+```
+
+Contoh pemicu otomatis: Cloud Function trigger Firestore `onUpdate posts/hugCount` atau `onCreate posts/{id}/replies` → panggil worker di atas. (Butuh Blaze plan untuk outbound dari Cloud Functions; alternatif: panggil worker langsung dari backend-mu sendiri.)
 
 ## 9. Troubleshooting
 

@@ -1,0 +1,12 @@
+# Copy ke wrangler.toml lalu deploy. Secrets via CLI, JANGAN tulis di sini.
+name = "rasa-notify"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Isi secrets (sekali saja):
+#   npx wrangler secret put ONESIGNAL_APP_ID
+#   npx wrangler secret put ONESIGNAL_API_KEY
+#   npx wrangler secret put NOTIFY_SECRET
+#
+# Deploy:
+#   npx wrangler deploy

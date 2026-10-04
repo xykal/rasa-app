@@ -24,6 +24,12 @@ class AppConfig {
   static const String geminiKey =
       String.fromEnvironment('GEMINI_KEY', defaultValue: '');
 
+  /// OneSignal App ID untuk push notification.
+  /// Isi via --dart-define=ONESIGNAL_APP_ID=xxx (lihat SETUP.md bagian 8).
+  /// Kalau kosong -> modul push nonaktif sendiri, app tetap jalan normal.
+  static const String oneSignalAppId =
+      String.fromEnvironment('ONESIGNAL_APP_ID', defaultValue: '');
+
   /// Batas karakter (disamakan dengan firestore.rules = 500)
   static const int maxPostLength = 280;
   static const int maxReplyLength = 280;
