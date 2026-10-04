@@ -72,9 +72,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 15),
                     decoration: BoxDecoration(
-                      gradient: rasaGradient(scheme),
+                      color: scheme.primary,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: RasaShadows.glow(scheme),
+                      boxShadow: RasaShadows.soft(scheme),
                     ),
                     child: Row(
                       children: [
@@ -172,7 +172,7 @@ class _Step extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              gradient: rasaGradient(scheme),
+              color: scheme.primary,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, size: 22, color: scheme.onPrimary),

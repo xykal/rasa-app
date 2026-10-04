@@ -131,12 +131,8 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                scheme.tertiaryContainer,
-                                scheme.primaryContainer,
-                              ],
-                            ),
+                            color: scheme.tertiaryContainer,
+                            border: Border.all(color: scheme.tertiary.withValues(alpha: 0.45)),
                             borderRadius: BorderRadius.circular(26),
                           ),
                           child: Column(
@@ -148,7 +144,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                     width: 34,
                                     height: 34,
                                     decoration: BoxDecoration(
-                                      gradient: rasaGradient(scheme),
+                                      color: scheme.primary,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(

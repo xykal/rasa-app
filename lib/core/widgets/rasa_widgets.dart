@@ -1,85 +1,127 @@
 import 'package:flutter/material.dart';
-import 'package:timeago/timeago.dart' as timeago;
+import 'package:flutter/services.dart';
 
-import '../config/app_config.dart';
 import '../../data/models/post_model.dart';
 
-// ─── FONDASI ─────────────────────────────────────────────────────
+/// ============================================================
+/// RASA Flat v2 — seluruh komponen UI custom.
+/// Solid 1 warna brand + 1 warna AI. Tanpa gradasi, tanpa glow.
+/// Micro-interaction: press-scale + haptic di semua yang bisa ditekan.
+/// Animasi dibungkus RepaintBoundary supaya mulus di 120Hz.
+/// ============================================================
 
-/// Format waktu ala "5 menit lalu" (Indonesia, fallback Inggris).
-String timeId(DateTime dt) {
-  try {
-    return timeago.format(dt, locale: 'id');
-  } catch (_) {
-    return timeago.format(dt);
-  }
-}
+// ---------- Radius & shadow tunggal ----------
 
 class RasaRadii {
   RasaRadii._();
   static const double card = 26;
   static const double sheet = 30;
-  static const double field = 22;
+  static const double dialog = 28;
+  static const double field = 20;
   static const double button = 999;
   static const double tile = 18;
 }
 
 class RasaShadows {
   RasaShadows._();
-  static List<BoxShadow> soft(ColorScheme s) => [
+
+  /// Shadow netral, blur kecil → murah di GPU, tidak bikin ngelag.
+  static List<BoxShadow> soft(ColorScheme s) {
+    final dark = s.brightness == Brightness.dark;
+    return [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: dark ? 0.35 : 0.07),
+        blurRadius: 14,
+        offset: const Offset(0, 5),
+      ),
+    ];
+  }
+
+  /// Shadow timbul untuk tombol utama — solid, bukan glow neon.
+  static List<BoxShadow> pop(ColorScheme s) => [
         BoxShadow(
-          color: s.shadow.withValues(alpha: 0.08),
-          blurRadius: 24,
-          offset: const Offset(0, 12),
-        ),
-      ];
-  static List<BoxShadow> glow(ColorScheme s) => [
-        BoxShadow(
-          color: s.primary.withValues(alpha: 0.35),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
+          color: s.primary.withValues(alpha: 0.25),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
         ),
       ];
 }
 
-LinearGradient rasaGradient(ColorScheme s) => LinearGradient(
-      colors: [s.primary, s.tertiary],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
+// ---------- Micro-interaction: memencet saat ditekan ----------
 
-// ─── LOGO & LOADER ───────────────────────────────────────────────
+/// Membungkus widget agar menyusut sedikit saat jari menempel.
+/// Dipakai di semua tombol, chip, dan ikon yang bisa ditekan.
+class _PressScale extends StatefulWidget {
+  final Widget child;
+  final bool enabled;
+  const _PressScale({required this.child, this.enabled = true});
 
-/// Logo brand RASA — gradient + ikon, dipakai di mana-mana.
-class RasaLogo extends StatelessWidget {
-  final double size;
-  const RasaLogo({super.key, this.size = 48});
+  @override
+  State<_PressScale> createState() => _PressScaleState();
+}
+
+class _PressScaleState extends State<_PressScale> {
+  bool _down = false;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        gradient: rasaGradient(scheme),
-        borderRadius: BorderRadius.circular(size * 0.3),
-        boxShadow: RasaShadows.glow(scheme),
-      ),
-      child: Icon(
-        Icons.spa,
-        color: scheme.onPrimary,
-        size: size * 0.55,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) {
+        if (widget.enabled) setState(() => _down = true);
+      },
+      onTapUp: (_) => setState(() => _down = false),
+      onTapCancel: () => setState(() => _down = false),
+      child: AnimatedScale(
+        scale: _down && widget.enabled ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child,
       ),
     );
   }
 }
 
-/// Loader khas RASA: logo berdenyut (pengganti spinner bawaan).
-class RasaLoader extends StatefulWidget {
+// ---------- Logo ----------
+
+/// Logo RASA: kotak solid warna brand + huruf R tebal.
+class RasaLogo extends StatelessWidget {
   final double size;
+  const RasaLogo({super.key, this.size = 56});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: scheme.primary,
+        borderRadius: BorderRadius.circular(size * 0.30),
+        boxShadow: RasaShadows.pop(scheme),
+      ),
+      child: Center(
+        child: Text(
+          'R',
+          style: TextStyle(
+            fontSize: size * 0.52,
+            fontWeight: FontWeight.w800,
+            color: scheme.onPrimary,
+            height: 1,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------- Loading ----------
+
+/// Loader khas RASA: logo berdenyut + titik mengetik.
+class RasaLoader extends StatefulWidget {
   final String? label;
-  const RasaLoader({super.key, this.size = 56, this.label});
+  final double size;
+  const RasaLoader({super.key, this.label, this.size = 84});
 
   @override
   State<RasaLoader> createState() => _RasaLoaderState();
@@ -87,16 +129,10 @@ class RasaLoader extends StatefulWidget {
 
 class _RasaLoaderState extends State<RasaLoader>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-  }
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
 
   @override
   void dispose() {
@@ -107,38 +143,41 @@ class _RasaLoaderState extends State<RasaLoader>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedBuilder(
-            animation: _c,
-            builder: (_, child) => Opacity(
-              opacity: 0.65 + _c.value * 0.35,
-              child: Transform.scale(
-                scale: 0.92 + _c.value * 0.08,
-                child: child,
+    return RepaintBoundary(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _c,
+              builder: (_, __) => Transform.scale(
+                scale: 1.0 + (_c.value * 0.07),
+                child: Opacity(
+                  opacity: 0.88 + (_c.value * 0.12),
+                  child: RasaLogo(size: widget.size),
+                ),
               ),
             ),
-            child: RasaLogo(size: widget.size),
-          ),
-          if (widget.label != null) ...[
-            const SizedBox(height: 14),
-            Text(
-              widget.label!,
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
+            if (widget.label != null) ...[
+              const SizedBox(height: 18),
+              Text(
+                widget.label!,
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
+              const SizedBox(height: 10),
+              const TypingDots(),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Titik-titik mengetik animasi (pengganti teks + spinner).
+/// Tiga titik mengetik khas aplikasi chat.
 class TypingDots extends StatefulWidget {
   const TypingDots({super.key});
 
@@ -148,16 +187,10 @@ class TypingDots extends StatefulWidget {
 
 class _TypingDotsState extends State<TypingDots>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat();
-  }
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat();
 
   @override
   void dispose() {
@@ -168,108 +201,104 @@ class _TypingDotsState extends State<TypingDots>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (_, __) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < 3; i++)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (_, __) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            final t = ((_c.value * 3) - i).clamp(0.0, 1.0);
+            final bounce = (t < 0.5 ? t * 2 : (1 - t) * 2).clamp(0.0, 1.0);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
               width: 8,
-              height: 8,
+              height: 8 - (bounce * 2.5),
               decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.45 + bounce * 0.55),
                 shape: BoxShape.circle,
-                color: scheme.primary.withValues(
-                  alpha: 0.35 + 0.65 * (0.5 + 0.5 * _wave(i)),
-                ),
               ),
-            ),
-        ],
+            );
+          }),
+        ),
       ),
     );
   }
-
-  double _wave(int i) {
-    final t = (_c.value * 3 - i * 0.5).clamp(0.0, 1.0);
-    return (t * 3.14159).clamp(-1.0, 1.0) >= 0
-        ? (1 - (t * 2 - 1).abs())
-        : 0;
-  }
 }
 
-// ─── TOMBOL ──────────────────────────────────────────────────────
+// ---------- Skeleton shimmer ----------
 
-/// Tombol utama RASA: pil gradient + glow.
-class RasaButton extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final VoidCallback? onPressed;
-  final bool busy;
-  final bool danger;
-  final bool expanded;
-  const RasaButton({
+/// Placeholder shimmer selagi konten dimuat — terasa jauh lebih cepat
+/// daripada spinner, dan jadi bahasa loading utama RASA.
+class RasaSkeleton extends StatefulWidget {
+  final double height;
+  final double? width;
+  final double radius;
+  const RasaSkeleton({
     super.key,
-    required this.label,
-    this.icon,
-    required this.onPressed,
-    this.busy = false,
-    this.danger = false,
-    this.expanded = true,
+    required this.height,
+    this.width,
+    this.radius = 14,
   });
+
+  @override
+  State<RasaSkeleton> createState() => _RasaSkeletonState();
+}
+
+class _RasaSkeletonState extends State<RasaSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1300),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final enabled = onPressed != null && !busy;
-    final gradient = danger
-        ? const LinearGradient(colors: [Color(0xFFE5484D), Color(0xFFB4232A)])
-        : rasaGradient(scheme);
-    return Opacity(
-      opacity: enabled ? 1 : 0.55,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(RasaRadii.button),
-          boxShadow: enabled ? RasaShadows.glow(scheme) : null,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(RasaRadii.button),
-            onTap: enabled ? onPressed : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
-              child: Row(
-                mainAxisSize:
-                    expanded ? MainAxisSize.max : MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (busy)
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: scheme.onPrimary,
-                      ),
-                    )
-                  else ...[
-                    if (icon != null) ...[
-                      Icon(icon, size: 20, color: scheme.onPrimary),
-                      const SizedBox(width: 10),
-                    ],
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onPrimary,
+    final dark = scheme.brightness == Brightness.dark;
+    final highlight = dark
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.white.withValues(alpha: 0.6);
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(widget.radius),
+        child: Container(
+          height: widget.height,
+          width: widget.width,
+          color: scheme.surfaceContainerHighest,
+          child: AnimatedBuilder(
+            animation: _c,
+            builder: (_, __) => LayoutBuilder(
+              builder: (_, bc) {
+                final w = bc.maxWidth.isFinite ? bc.maxWidth : 300.0;
+                final x = -w * 0.6 + (_c.value * w * 1.6);
+                return Stack(
+                  children: [
+                    Positioned(
+                      left: x,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: w * 0.6,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              highlight,
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
-                ],
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -278,225 +307,8 @@ class RasaButton extends StatelessWidget {
   }
 }
 
-/// Tombol tonal: pil lembut tanpa gradient.
-class RasaTonalButton extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final VoidCallback? onPressed;
-  const RasaTonalButton({
-    super.key,
-    required this.label,
-    this.icon,
-    required this.onPressed,
-  });
+// ---------- Judul seksi ----------
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.secondaryContainer,
-      borderRadius: BorderRadius.circular(RasaRadii.button),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(RasaRadii.button),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 19, color: scheme.onSecondaryContainer),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: scheme.onSecondaryContainer,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Tombol ghost: teks + ikon, tanpa latar.
-class RasaGhostButton extends StatelessWidget {
-  final String label;
-  final VoidCallback? onPressed;
-  const RasaGhostButton({
-    super.key,
-    required this.label,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return TextButton(
-      onPressed: onPressed,
-      child: Text(
-        label,
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          color: scheme.primary,
-        ),
-      ),
-    );
-  }
-}
-
-// ─── KARTU, FIELD, APPBAR ────────────────────────────────────────
-
-/// Kartu khas RASA: radius besar + border halus + bayangan lembut.
-class RasaCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  final VoidCallback? onTap;
-  const RasaCard({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.all(18),
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(RasaRadii.card),
-        border: Border.all(color: scheme.outlineVariant),
-        boxShadow: RasaShadows.soft(scheme),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(RasaRadii.card),
-          onTap: onTap,
-          child: Padding(padding: padding, child: child),
-        ),
-      ),
-    );
-  }
-}
-
-/// Field teks khas RASA.
-class RasaTextField extends StatelessWidget {
-  final TextEditingController? controller;
-  final String? hint;
-  final IconData? prefix;
-  final Widget? suffix;
-  final int? maxLines;
-  final int? minLines;
-  final int? maxLength;
-  final bool autofocus;
-  final ValueChanged<String>? onChanged;
-  final ValueChanged<String>? onSubmitted;
-  final TextInputType? keyboardType;
-  const RasaTextField({
-    super.key,
-    this.controller,
-    this.hint,
-    this.prefix,
-    this.suffix,
-    this.maxLines = 1,
-    this.minLines,
-    this.maxLength,
-    this.autofocus = false,
-    this.onChanged,
-    this.onSubmitted,
-    this.keyboardType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      minLines: minLines,
-      maxLength: maxLength,
-      autofocus: autofocus,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      onSubmitted: onSubmitted,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon:
-            prefix == null ? null : Icon(prefix, size: 22),
-        suffixIcon: suffix,
-      ),
-    );
-  }
-}
-
-/// AppBar khas RASA: tinggi lega + tombol kembali bulat custom.
-class RasaAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String title;
-  final bool showLogo;
-  final List<Widget>? actions;
-  const RasaAppBar({
-    super.key,
-    required this.title,
-    this.showLogo = false,
-    this.actions,
-  });
-
-  @override
-  Size get preferredSize => const Size.fromHeight(70);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final canPop = Navigator.canPop(context);
-    return AppBar(
-      toolbarHeight: 70,
-      automaticallyImplyLeading: false,
-      leading: canPop
-          ? Padding(
-              padding: const EdgeInsets.only(left: 14, top: 12, bottom: 12),
-              child: Material(
-                color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => Navigator.of(context).pop(),
-                  child: const Icon(Icons.arrow_back_rounded, size: 22),
-                ),
-              ),
-            )
-          : null,
-      leadingWidth: canPop ? 60 : 0,
-      titleSpacing: canPop ? 2 : 18,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showLogo) ...[
-            const RasaLogo(size: 34),
-            const SizedBox(width: 10),
-          ],
-          Flexible(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-      actions: [...?actions, const SizedBox(width: 10)],
-    );
-  }
-}
-
-/// Judul seksi kecil yang konsisten di semua layar.
 class SectionTitle extends StatelessWidget {
   final String text;
   const SectionTitle(this.text, {super.key});
@@ -516,45 +328,80 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
-// ─── AVATAR & MOOD ───────────────────────────────────────────────
+// ---------- Tombol ----------
 
-/// Avatar gradient dari inisial nama (warnanya stabil per nama).
-class RasaAvatar extends StatelessWidget {
-  final String name;
-  final double radius;
-  const RasaAvatar({super.key, required this.name, this.radius = 22});
-
-  static const _pairs = [
-    [Color(0xFF6C4CF1), Color(0xFFB057C9)],
-    [Color(0xFF0EA5A5), Color(0xFF34D399)],
-    [Color(0xFFF76B15), Color(0xFFFFB59E)],
-    [Color(0xFF3E63DD), Color(0xFF8EC8FF)],
-    [Color(0xFFE5484D), Color(0xFFFF8C8C)],
-    [Color(0xFF8E4EC6), Color(0xFF5B5BD6)],
-  ];
+/// Tombol utama: solid warna brand, memencet + getar saat ditekan.
+class RasaButton extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+  final bool busy;
+  const RasaButton({
+    super.key,
+    required this.label,
+    this.icon,
+    required this.onPressed,
+    this.busy = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final pair = _pairs[name.hashCode.abs() % _pairs.length];
-    final initial = name.isEmpty ? 'R' : name.trim()[0].toUpperCase();
-    return Container(
-      width: radius * 2,
-      height: radius * 2,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [pair[0], pair[1]],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          initial,
-          style: TextStyle(
-            fontSize: radius,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
+    final scheme = Theme.of(context).colorScheme;
+    final enabled = onPressed != null && !busy;
+    return _PressScale(
+      enabled: enabled,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.55,
+        child: Material(
+          color: scheme.primary,
+          borderRadius: BorderRadius.circular(RasaRadii.button),
+          elevation: 0,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(RasaRadii.button),
+            onTap: enabled
+                ? () {
+                    HapticFeedback.lightImpact();
+                    onPressed!();
+                  }
+                : null,
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(RasaRadii.button),
+                boxShadow:
+                    enabled ? RasaShadows.pop(scheme) : null,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Center(
+                child: busy
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.6,
+                          color: scheme.onPrimary,
+                        ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: scheme.onPrimary,
+                            ),
+                          ),
+                          if (icon != null) ...[
+                            const SizedBox(width: 9),
+                            Icon(icon,
+                                size: 20, color: scheme.onPrimary),
+                          ],
+                        ],
+                      ),
+              ),
+            ),
           ),
         ),
       ),
@@ -562,7 +409,420 @@ class RasaAvatar extends StatelessWidget {
   }
 }
 
-/// Avatar mood berwarna — konsisten di feed, detail, dan editor.
+/// Tombol kedua: latar lembut, teks warna brand.
+class RasaTonalButton extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+  const RasaTonalButton({
+    super.key,
+    required this.label,
+    this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _PressScale(
+      enabled: onPressed != null,
+      child: Material(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(RasaRadii.button),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(RasaRadii.button),
+          onTap: onPressed == null
+              ? null
+              : () {
+                  HapticFeedback.lightImpact();
+                  onPressed!();
+                },
+          child: Container(
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 20, color: scheme.primary),
+                  const SizedBox(width: 9),
+                ],
+                Flexible(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tombol teks: tanpa latar, untuk aksi sekunder.
+class RasaGhostButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  const RasaGhostButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _PressScale(
+      enabled: onPressed != null,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(RasaRadii.button),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(RasaRadii.button),
+          onTap: onPressed == null
+              ? null
+              : () {
+                  HapticFeedback.lightImpact();
+                  onPressed!();
+                },
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: onPressed == null
+                    ? scheme.onSurfaceVariant.withValues(alpha: 0.5)
+                    : scheme.primary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------- Kartu & field ----------
+
+class RasaCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+  const RasaCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(18),
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(RasaRadii.card),
+      elevation: 0,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(RasaRadii.card),
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap!();
+              },
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(RasaRadii.card),
+            border: Border.all(color: scheme.outlineVariant),
+            boxShadow: RasaShadows.soft(scheme),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// Kolom ketik khas RASA: sudut besar, fokus bergaris brand.
+class RasaTextField extends StatelessWidget {
+  final TextEditingController? controller;
+  final String hint;
+  final IconData? prefix;
+  final Widget? suffix;
+  final int maxLines;
+  final int? maxLength;
+  final bool autofocus;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  const RasaTextField({
+    super.key,
+    this.controller,
+    this.hint = '',
+    this.prefix,
+    this.suffix,
+    this.maxLines = 1,
+    this.maxLength,
+    this.autofocus = false,
+    this.onChanged,
+    this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      maxLength: maxLength,
+      autofocus: autofocus,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      style: TextStyle(color: scheme.onSurface, height: 1.5),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+        filled: true,
+        fillColor: scheme.surfaceContainerHighest,
+        prefixIcon:
+            prefix == null ? null : Icon(prefix, color: scheme.primary),
+        suffixIcon: suffix,
+        counterText: '',
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(RasaRadii.field),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(RasaRadii.field),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------- AppBar ----------
+
+/// AppBar khas RASA: logo + judul, tombol kembali bulat.
+class RasaAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final bool showLogo;
+  final List<Widget> actions;
+  const RasaAppBar({
+    super.key,
+    required this.title,
+    this.showLogo = false,
+    this.actions = const [],
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final canPop = Navigator.of(context).canPop();
+    return AppBar(
+      backgroundColor: scheme.surface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      automaticallyImplyLeading: false,
+      titleSpacing: 16,
+      title: Row(
+        children: [
+          if (canPop && !showLogo)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _PressScale(
+                child: Material(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.of(context).pop();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Icon(
+                        Icons.arrow_back_rounded,
+                        size: 22,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (showLogo) ...[
+            const RasaLogo(size: 36),
+            const SizedBox(width: 11),
+          ],
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 19, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        ...actions,
+        if (actions.isNotEmpty) const SizedBox(width: 10),
+      ],
+    );
+  }
+}
+
+/// Badge kecil untuk appbar (streak, timer, status).
+class RasaMiniBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const RasaMiniBadge({super.key, required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: scheme.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+              color: scheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------- Chip & mood ----------
+
+/// Chip pil khas RASA. Ikon selalu berwarna biar hidup.
+class RasaChip extends StatelessWidget {
+  final IconData icon;
+  final Color? iconColor;
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onSelected;
+  const RasaChip({
+    super.key,
+    required this.icon,
+    this.iconColor,
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _PressScale(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onSelected(!selected);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding:
+              const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? scheme.primary
+                : scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(RasaRadii.button),
+            border: selected
+                ? null
+                : Border.all(color: scheme.outlineVariant),
+            boxShadow: selected ? RasaShadows.pop(scheme) : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: selected
+                    ? scheme.onPrimary
+                    : (iconColor ?? scheme.primary),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                  color: selected
+                      ? scheme.onPrimary
+                      : scheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Data mood: id, label, ikon Material, warna solid.
+class MoodInfo {
+  final String id;
+  final String label;
+  final IconData icon;
+  final Color color;
+  const MoodInfo(this.id, this.label, this.icon, this.color);
+}
+
+const kMoods = [
+  MoodInfo('senang', 'Senang', Icons.sentiment_very_satisfied_rounded,
+      Color(0xFFE39B2D)),
+  MoodInfo('sedih', 'Sedih', Icons.sentiment_dissatisfied_rounded,
+      Color(0xFF4C7DE0)),
+  MoodInfo('marah', 'Marah', Icons.sentiment_very_dissatisfied_rounded,
+      Color(0xFFDE5A5A)),
+  MoodInfo('tenang', 'Tenang', Icons.spa_rounded, Color(0xFF35A06F)),
+  MoodInfo('lelah', 'Lelah', Icons.bedtime_rounded, Color(0xFF8E93A6)),
+  MoodInfo('flat', 'Biasa', Icons.sentiment_neutral_rounded,
+      Color(0xFF8E93A6)),
+];
+
+MoodInfo moodOf(String id) =>
+    kMoods.firstWhere((m) => m.id == id, orElse: () => kMoods.last);
+
+/// Avatar lingkaran solid warna mood + ikon putih.
 class MoodAvatar extends StatelessWidget {
   final String mood;
   final double radius;
@@ -571,145 +831,118 @@ class MoodAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = moodOf(mood);
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: m.color.withValues(alpha: 0.15),
-      child: Icon(m.icon, color: m.color, size: radius * 1.1),
-    );
-  }
-}
-
-/// Chip pil khas RASA (pengganti ChoiceChip bawaan).
-class RasaChip extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final Color? iconColor;
-  final bool selected;
-  final ValueChanged<bool> onSelected;
-  const RasaChip({
-    super.key,
-    required this.label,
-    this.icon,
-    this.iconColor,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () => onSelected(!selected),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? scheme.primary : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(RasaRadii.button),
-          boxShadow: selected ? RasaShadows.glow(scheme) : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 18,
-                color: selected
-                    ? scheme.onPrimary
-                    : (iconColor ?? scheme.onSurfaceVariant),
-              ),
-              const SizedBox(width: 7),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        color: m.color,
+        shape: BoxShape.circle,
       ),
+      child: Icon(m.icon, color: Colors.white, size: radius * 1.15),
     );
   }
 }
 
-/// Pilihan mood — dipakai di onboarding & editor cerita.
+/// Pemilih mood: baris ikon yang membesar saat dipilih.
 class MoodPicker extends StatelessWidget {
-  final String? selected;
+  final String selected;
   final ValueChanged<String> onPick;
   const MoodPicker({super.key, required this.selected, required this.onPick});
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Wrap(
-      spacing: 9,
-      runSpacing: 9,
+      spacing: 10,
+      runSpacing: 10,
       children: [
         for (final m in kMoods)
-          RasaChip(
-            icon: m.icon,
-            iconColor: m.color,
-            label: m.label,
-            selected: selected == m.id,
-            onSelected: (_) => onPick(m.id),
+          _PressScale(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onPick(m.id);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.symmetric(
+                  horizontal: selected == m.id ? 16 : 13,
+                  vertical: selected == m.id ? 12 : 10,
+                ),
+                decoration: BoxDecoration(
+                  color: selected == m.id
+                      ? m.color.withValues(alpha: 0.16)
+                      : scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(RasaRadii.button),
+                  border: Border.all(
+                    color: selected == m.id
+                        ? m.color
+                        : scheme.outlineVariant,
+                    width: selected == m.id ? 2 : 1.2,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(m.icon, size: 20, color: m.color),
+                    const SizedBox(width: 7),
+                    Text(
+                      m.label,
+                      style: TextStyle(
+                        fontWeight: selected == m.id
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        fontSize: 13.5,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
       ],
     );
   }
 }
 
-/// Tombol reaksi (Peluk / Sama) khas RASA.
-class HugButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int count;
-  final bool active;
-  final VoidCallback onTap;
-  const HugButton({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.count,
-    required this.active,
-    required this.onTap,
-  });
+// ---------- Avatar anonim ----------
+
+/// Avatar huruf: lingkaran lembut + inisial warna brand.
+class RasaAvatar extends StatelessWidget {
+  final String name;
+  final double radius;
+  const RasaAvatar({super.key, required this.name, this.radius = 18});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final fg = active ? scheme.onPrimary : scheme.onSurfaceVariant;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          gradient: active ? rasaGradient(scheme) : null,
-          color: active ? null : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: active ? RasaShadows.glow(scheme) : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 17, color: fg),
-            const SizedBox(width: 7),
-            Text(
-              '$label  •  $count',
-              style: TextStyle(fontWeight: FontWeight.w800, color: fg),
-            ),
-          ],
+    final ch = name.trim().isEmpty ? 'R' : name.trim()[0].toUpperCase();
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          ch,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: radius * 0.95,
+            color: scheme.primary,
+          ),
         ),
       ),
     );
   }
 }
 
-// ─── KARTU CERITA & FEED ─────────────────────────────────────────
+// ---------- Kartu cerita ----------
 
-/// Kartu cerita — dipakai di feed & profil.
+/// Kartu cerita di feed: header mood → isi → tombol peluk & aku-juga.
 class RasaPostCard extends StatelessWidget {
   final RasaPost post;
   final VoidCallback? onTap;
@@ -728,6 +961,7 @@ class RasaPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final mood = moodOf(post.mood);
     return RasaCard(
       onTap: onTap,
       child: Column(
@@ -735,95 +969,115 @@ class RasaPostCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              MoodAvatar(mood: post.mood),
-              const SizedBox(width: 11),
+              MoodAvatar(mood: post.mood, radius: 19),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       post.alias,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 14.5),
                     ),
                     Text(
-                      timeId(post.createdAt),
+                      '${mood.label} • ${timeId(post.createdAt)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (post.aiReply != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    gradient: rasaGradient(scheme),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        size: 13,
-                        color: scheme.onPrimary,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Ditemani AI',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 11, vertical: 6),
+                decoration: BoxDecoration(
+                  color: mood.color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
                 ),
-              if (onReport != null)
-                IconButton(
-                  icon: const Icon(Icons.more_horiz_rounded),
-                  onPressed: onReport,
-                  visualDensity: VisualDensity.compact,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(mood.icon, size: 14, color: mood.color),
+                    const SizedBox(width: 5),
+                    Text(
+                      mood.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: mood.color,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
             ],
           ),
+          const SizedBox(height: 12),
+          Text(
+            post.text,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 14.5, height: 1.55),
+          ),
           const SizedBox(height: 13),
-          Text(post.text, style: const TextStyle(fontSize: 15, height: 1.5)),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 9,
-            runSpacing: 9,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          Row(
             children: [
-              HugButton(
+              _ReactButton(
                 icon: Icons.volunteer_activism_rounded,
-                label: 'Peluk',
-                count: post.hugCount,
-                active: post.hugged,
-                onTap: onHug ?? () {},
+                label: 'Peluk ${post.hugCount}',
+                active: post.huggedByMe,
+                onTap: onHug,
               ),
-              HugButton(
-                icon: Icons.groups_rounded,
-                label: 'Sama',
-                count: post.meTooCount,
-                active: post.meToo,
-                onTap: onMeToo ?? () {},
+              const SizedBox(width: 9),
+              _ReactButton(
+                icon: Icons.group_outlined,
+                label: 'Aku juga ${post.meTooCount}',
+                active: post.meTooByMe,
+                onTap: onMeToo,
               ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 15,
-                color: scheme.onSurfaceVariant,
+              const Spacer(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 17,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${post.replyCount}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 4),
-              Text(
-                '${post.replyCount} tanggapan',
-                style: TextStyle(color: scheme.onSurfaceVariant),
-              ),
+              if (onReport != null) ...[
+                const SizedBox(width: 4),
+                _PressScale(
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      onReport!();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.more_horiz_rounded,
+                        size: 21,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -832,7 +1086,76 @@ class RasaPostCard extends StatelessWidget {
   }
 }
 
-/// Kartu pertanyaan harian di atas feed.
+class _ReactButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+  const _ReactButton({
+    required this.icon,
+    required this.label,
+    required this.active,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _PressScale(
+      enabled: onTap != null,
+      child: GestureDetector(
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap!();
+              },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: active
+                ? scheme.primary
+                : scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(999),
+            border: active
+                ? null
+                : Border.all(color: scheme.outlineVariant),
+            boxShadow: active ? RasaShadows.pop(scheme) : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 17,
+                color: active
+                    ? scheme.onPrimary
+                    : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: active
+                      ? scheme.onPrimary
+                      : scheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------- Kartu pertanyaan harian ----------
+
 class DailyQuestionCard extends StatelessWidget {
   final String question;
   final VoidCallback onAnswer;
@@ -846,92 +1169,86 @@ class DailyQuestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(19),
       decoration: BoxDecoration(
-        gradient: rasaGradient(scheme),
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(RasaRadii.card),
-        boxShadow: RasaShadows.glow(scheme),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -30,
-            top: -30,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 30,
-            bottom: -45,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.1),
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 16,
-                    color: scheme.onPrimary.withValues(alpha: 0.9),
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    'PERTANYAAN HARI INI',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                      color: scheme.onPrimary.withValues(alpha: 0.9),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                question,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.lightbulb_rounded,
                   color: scheme.onPrimary,
-                  height: 1.35,
+                  size: 20,
                 ),
               ),
-              const SizedBox(height: 14),
-              Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(999),
-                  onTap: onAnswer,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 11),
-                    child: Text(
-                      'Jawab Sekarang',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: scheme.primary,
-                      ),
-                    ),
-                  ),
+              const SizedBox(width: 11),
+              Text(
+                'Pertanyaan hari ini',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: scheme.onPrimaryContainer,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            question,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              height: 1.45,
+              color: scheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _PressScale(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                onAnswer();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: RasaShadows.pop(scheme),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Jawab sekarang',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: scheme.onPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 18,
+                      color: scheme.onPrimary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -939,112 +1256,44 @@ class DailyQuestionCard extends StatelessWidget {
   }
 }
 
-/// Status kosong khas RASA — ikon gradient + ajakan aksi.
-class RasaEmptyState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-  const RasaEmptyState({
-    super.key,
-    this.icon = Icons.forum_outlined,
-    required this.title,
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+// ---------- Chat ----------
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                gradient: rasaGradient(scheme),
-                shape: BoxShape.circle,
-                boxShadow: RasaShadows.glow(scheme),
-              ),
-              child: Icon(icon, size: 38, color: scheme.onPrimary),
-            ),
-            const SizedBox(height: 16),
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: scheme.onSurfaceVariant, height: 1.6),
-            ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 18),
-              RasaTonalButton(
-                label: actionLabel!,
-                icon: Icons.add_rounded,
-                onPressed: onAction,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── CHAT ────────────────────────────────────────────────────────
-
-/// Gelembung chat konsisten (AI Teman & Biliar).
+/// Gelembung chat: milikku solid brand kanan, lawan abu kiri.
 class ChatBubble extends StatelessWidget {
   final String text;
   final bool mine;
-  final bool highlight;
-  const ChatBubble({
-    super.key,
-    required this.text,
-    required this.mine,
-    this.highlight = false,
-  });
+  const ChatBubble({super.key, required this.text, required this.mine});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bg = mine
-        ? null
-        : (highlight ? scheme.tertiaryContainer : scheme.surfaceContainerHigh);
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
-        constraints: const BoxConstraints(maxWidth: 300),
+        margin: EdgeInsets.only(
+          bottom: 10,
+          left: mine ? 52 : 0,
+          right: mine ? 0 : 52,
+        ),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          gradient: mine ? rasaGradient(scheme) : null,
-          color: bg,
+          color: mine ? scheme.primary : scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(20).copyWith(
-            bottomRight:
-                mine ? const Radius.circular(6) : const Radius.circular(20),
-            bottomLeft:
-                mine ? const Radius.circular(20) : const Radius.circular(6),
+            bottomRight: mine
+                ? const Radius.circular(6)
+                : const Radius.circular(20),
+            bottomLeft: mine
+                ? const Radius.circular(20)
+                : const Radius.circular(6),
           ),
-          border: highlight
-              ? Border.all(color: scheme.tertiary.withValues(alpha: 0.5))
-              : null,
         ),
         child: Text(
           text,
           style: TextStyle(
             height: 1.5,
-            color: mine
-                ? scheme.onPrimary
-                : (highlight
-                    ? scheme.onTertiaryContainer
-                    : scheme.onSurface),
+            fontSize: 14.5,
+            color: mine ? scheme.onPrimary : scheme.onSurface,
           ),
         ),
       ),
@@ -1052,7 +1301,7 @@ class ChatBubble extends StatelessWidget {
   }
 }
 
-/// Baris komposer chat khas RASA (field + tombol kirim gradient).
+/// Kolom ketik chat + tombol kirim lingkaran solid.
 class ChatComposer extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -1068,34 +1317,59 @@ class ChatComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return SafeArea(
+      top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
         child: Row(
           children: [
             Expanded(
-              child: RasaTextField(
-                controller: controller,
-                hint: hint,
-                maxLines: 4,
-                minLines: 1,
-                onSubmitted: (_) => onSend(),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: TextField(
+                  controller: controller,
+                  minLines: 1,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) {
+                    HapticFeedback.lightImpact();
+                    onSend();
+                  },
+                  style: TextStyle(color: scheme.onSurface),
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    hintStyle:
+                        TextStyle(color: scheme.onSurfaceVariant),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 13),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: onSend,
-              child: Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: rasaGradient(scheme),
-                  borderRadius: BorderRadius.circular(19),
-                  boxShadow: RasaShadows.glow(scheme),
-                ),
-                child: Icon(
-                  Icons.send_rounded,
-                  color: scheme.onPrimary,
-                  size: 22,
+            const SizedBox(width: 9),
+            _PressScale(
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onSend();
+                },
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: scheme.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: RasaShadows.pop(scheme),
+                  ),
+                  child: Icon(
+                    Icons.arrow_upward_rounded,
+                    color: scheme.onPrimary,
+                    size: 24,
+                  ),
                 ),
               ),
             ),
@@ -1106,7 +1380,7 @@ class ChatComposer extends StatelessWidget {
   }
 }
 
-// ─── PILIHAN & PENGATURAN ────────────────────────────────────────
+// ---------- Segmented & switch & setting ----------
 
 class RasaSegment<T> {
   final T value;
@@ -1119,7 +1393,7 @@ class RasaSegment<T> {
   });
 }
 
-/// Segmented control khas RASA (pengganti SegmentedButton bawaan).
+/// Pilihan segmen (mis. tema Terang/Auto/Gelap).
 class RasaSegmented<T> extends StatelessWidget {
   final List<RasaSegment<T>> segments;
   final T value;
@@ -1138,46 +1412,55 @@ class RasaSegmented<T> extends StatelessWidget {
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         children: [
           for (final s in segments)
             Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(s.value),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  decoration: BoxDecoration(
-                    gradient:
-                        s.value == value ? rasaGradient(scheme) : null,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow:
-                        s.value == value ? RasaShadows.glow(scheme) : null,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        s.icon,
-                        size: 17,
-                        color: s.value == value
-                            ? scheme.onPrimary
-                            : scheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        s.label,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
+              child: _PressScale(
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onChanged(s.value);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: BoxDecoration(
+                      color: s.value == value
+                          ? scheme.primary
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(17),
+                      boxShadow: s.value == value
+                          ? RasaShadows.pop(scheme)
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          s.icon,
+                          size: 18,
                           color: s.value == value
                               ? scheme.onPrimary
                               : scheme.onSurfaceVariant,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 7),
+                        Text(
+                          s.label,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13.5,
+                            color: s.value == value
+                                ? scheme.onPrimary
+                                : scheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1188,46 +1471,49 @@ class RasaSegmented<T> extends StatelessWidget {
   }
 }
 
-/// Toggle khas RASA (pengganti Switch bawaan).
+/// Switch geser khas RASA.
 class RasaSwitch extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
-  const RasaSwitch({
-    super.key,
-    required this.value,
-    required this.onChanged,
-  });
+  const RasaSwitch({super.key, required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () => onChanged(!value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 54,
-        height: 31,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          gradient: value ? rasaGradient(scheme) : null,
-          color: value ? null : scheme.outlineVariant,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: AnimatedAlign(
+    return _PressScale(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onChanged(!value);
+        },
+        child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+          curve: Curves.easeOut,
+          width: 54,
+          height: 32,
+          padding: const EdgeInsets.all(3.5),
+          decoration: BoxDecoration(
+            color: value
+                ? scheme.primary
+                : scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(999),
+            border: value
+                ? null
+                : Border.all(color: scheme.outlineVariant),
+          ),
+          alignment:
+              value ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             width: 25,
             height: 25,
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: value ? scheme.onPrimary : scheme.onSurfaceVariant,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              value ? Icons.check_rounded : Icons.close_rounded,
-              size: 15,
-              color: value ? scheme.primary : scheme.outline,
-            ),
+            child: value
+                ? Icon(Icons.check_rounded,
+                    size: 16, color: scheme.primary)
+                : null,
           ),
         ),
       ),
@@ -1235,11 +1521,11 @@ class RasaSwitch extends StatelessWidget {
   }
 }
 
-/// Baris pengaturan khas RASA.
+/// Baris pengaturan: ikon + judul + aksi kanan.
 class RasaSettingTile extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String? subtitle;
+  final String subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool danger;
@@ -1247,7 +1533,7 @@ class RasaSettingTile extends StatelessWidget {
     super.key,
     required this.icon,
     required this.title,
-    this.subtitle,
+    required this.subtitle,
     this.trailing,
     this.onTap,
     this.danger = false,
@@ -1256,96 +1542,87 @@ class RasaSettingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final fg = danger ? const Color(0xFFE5484D) : scheme.onSurface;
-    return RasaCard(
-      padding: const EdgeInsets.all(14),
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: danger
-                  ? const Color(0xFFE5484D).withValues(alpha: 0.12)
-                  : scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              icon,
-              color: danger ? const Color(0xFFE5484D) : scheme.primary,
-            ),
+    final dangerColor = scheme.brightness == Brightness.dark
+        ? scheme.error
+        : const Color(0xFFD64545);
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(RasaRadii.tile),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(RasaRadii.tile),
+        onTap: onTap == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                onTap!();
+              },
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(RasaRadii.tile),
+            border: Border.all(color: scheme.outlineVariant),
           ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(fontWeight: FontWeight.w800, color: fg),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: danger
+                      ? dangerColor.withValues(alpha: 0.12)
+                      : scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
+                child: Icon(
+                  icon,
+                  size: 22,
+                  color: danger ? dangerColor : scheme.primary,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14.5,
+                        color: danger ? dangerColor : scheme.onSurface,
+                      ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 10),
+                trailing!,
+              ] else if (onTap != null)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: scheme.onSurfaceVariant,
+                ),
+            ],
           ),
-          if (trailing != null) ...[
-            const SizedBox(width: 10),
-            trailing!,
-          ] else if (onTap != null)
-            Icon(
-              Icons.chevron_right_rounded,
-              color: scheme.onSurfaceVariant,
-            ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Badge kecil: streak, demo, dsb.
-class RasaMiniBadge extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const RasaMiniBadge({super.key, required this.icon, required this.label});
+// ---------- Dialog, sheet, snackbar ----------
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: scheme.primary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── DIALOG, SHEET, SNACKBAR ─────────────────────────────────────
-
+/// Dialog khas RASA: ikon, judul, pesan, konten opsional, tombol.
 Future<T?> showRasaDialog<T>(
   BuildContext context, {
   required IconData icon,
@@ -1355,55 +1632,86 @@ Future<T?> showRasaDialog<T>(
   required List<Widget> actions,
 }) {
   final scheme = Theme.of(context).colorScheme;
-  return showDialog<T>(
+  return showGeneralDialog<T>(
     context: context,
-    builder: (ctx) => Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(26),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                gradient: rasaGradient(scheme),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: scheme.onPrimary, size: 30),
+    barrierDismissible: true,
+    barrierLabel: title,
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    transitionDuration: const Duration(milliseconds: 230),
+    pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+    transitionBuilder: (ctx, anim, __, ____) {
+      final curved = CurvedAnimation(
+        parent: anim,
+        curve: Curves.easeOutBack,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return ScaleTransition(
+        scale: Tween<double>(begin: 0.9, end: 1.0).animate(curved),
+        child: FadeTransition(
+          opacity: anim,
+          child: AlertDialog(
+            backgroundColor: scheme.surfaceContainerLow,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(RasaRadii.dialog),
             ),
-            const SizedBox(height: 16),
-            Text(title, style: Theme.of(ctx).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: scheme.onSurfaceVariant,
-                height: 1.55,
-              ),
-            ),
-            if (content != null) ...[
-              const SizedBox(height: 16),
-              content,
-            ],
-            const SizedBox(height: 20),
-            Row(children: [
-              for (var i = 0; i < actions.length; i++) ...[
-                if (i > 0) const SizedBox(width: 10),
-                Expanded(child: actions[i]),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(19),
+                  ),
+                  child: Icon(icon, size: 28, color: scheme.primary),
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 9),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.55,
+                  ),
+                ),
+                if (content != null) ...[
+                  const SizedBox(height: 16),
+                  content,
+                ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    for (int i = 0; i < actions.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 10),
+                      Expanded(child: actions[i]),
+                    ],
+                  ],
+                ),
               ],
-            ]),
-          ],
+            ),
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
-/// Dialog konfirmasi hapus yang standar di seluruh aplikasi.
+/// Dialog konfirmasi hapus (merah).
 Future<bool> confirmDelete(BuildContext context, String message) async {
-  final res = await showRasaDialog<bool>(
+  final scheme = Theme.of(context).colorScheme;
+  final danger = scheme.brightness == Brightness.dark
+      ? scheme.error
+      : const Color(0xFFD64545);
+  final ok = await showRasaDialog<bool>(
     context,
     icon: Icons.delete_outline_rounded,
     title: 'Hapus?',
@@ -1413,159 +1721,290 @@ Future<bool> confirmDelete(BuildContext context, String message) async {
         label: 'Batal',
         onPressed: () => Navigator.pop(context, false),
       ),
-      RasaButton(
+      _DangerButton(
         label: 'Hapus',
-        danger: true,
+        color: danger,
         onPressed: () => Navigator.pop(context, true),
       ),
     ],
   );
-  return res ?? false;
+  return ok ?? false;
 }
 
-Future<T?> showRasaSheet<T>(BuildContext context, Widget child) {
+class _DangerButton extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+  const _DangerButton({
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _PressScale(
+      child: Material(
+        color: color,
+        borderRadius: BorderRadius.circular(RasaRadii.button),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(RasaRadii.button),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onPressed();
+          },
+          child: Container(
+            height: 52,
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet khas RASA: gagang, judul, isi.
+Future<T?> showRasaSheet<T>(
+  BuildContext context, {
+  required String title,
+  required Widget child,
+}) {
+  final scheme = Theme.of(context).colorScheme;
   return showModalBottomSheet<T>(
     context: context,
-    showDragHandle: true,
+    backgroundColor: scheme.surfaceContainerLow,
+    elevation: 0,
     isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+    ),
     builder: (ctx) => SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-        child: child,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: scheme.outlineVariant,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 14),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+                child: child,
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
 }
 
-/// Bottom sheet lapor konten (masuk ke koleksi reports buat dimoderasi admin).
-Future<void> showReportSheet(BuildContext context, String postId) {
-  final scheme = Theme.of(context).colorScheme;
-  return showRasaSheet(
+/// Sheet pilih alasan laporan.
+void showReportSheet(BuildContext context, String postId) {
+  const reasons = [
+    (Icons.bullying_outlined, 'Perundungan / kasar'),
+    (Icons.privacy_tip_outlined, 'Bocorkan privasi'),
+    (Icons.campaign_outlined, 'Spam / promosi'),
+    (Icons.warning_amber_rounded, 'Konten berbahaya'),
+  ];
+  showRasaSheet(
     context,
-    Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    title: 'Laporkan cerita ini?',
+    child: Column(
       children: [
-        Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Icon(Icons.flag_outlined, color: scheme.primary),
-            ),
-            const SizedBox(width: 13),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Laporkan cerita ini?',
-                    style:
-                        TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-                  ),
-                  SizedBox(height: 3),
-                  Text(
-                    'Tim moderasi akan meninjau dalam 1x24 jam.',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        for (final r in kReportReasons)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: () {
-                  Navigator.pop(context);
-                  RasaSnack.show(
-                    context,
-                    'Terima kasih. Laporanmu akan kami tinjau.',
-                    icon: Icons.flag_rounded,
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 15),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          r,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
+        for (final r in reasons)
+          Builder(builder: (ctx) {
+            final scheme = Theme.of(ctx).colorScheme;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: _PressScale(
+                child: Material(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(RasaRadii.tile),
+                  child: InkWell(
+                    borderRadius:
+                        BorderRadius.circular(RasaRadii.tile),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pop(ctx);
+                      RasaSnack.show(
+                        context,
+                        'Terima kasih. Laporanmu membantu menjaga RASA tetap aman.',
+                        icon: Icons.check_circle_rounded,
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Icon(r.$1,
+                              size: 22, color: scheme.primary),
+                          const SizedBox(width: 12),
+                          Text(
+                            r.$2,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                        ],
                       ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
       ],
     ),
   );
 }
 
-/// Snackbar khas RASA: ikon + pesan, selalu floating.
+/// Snackbar khas RASA: pil adaptif terang/gelap + ikon.
 class RasaSnack {
   RasaSnack._();
+
   static void show(
     BuildContext context,
     String message, {
     IconData icon = Icons.check_circle_rounded,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    HapticFeedback.lightImpact();
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
+          backgroundColor: scheme.inverseSurface,
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          margin:
+              const EdgeInsets.fromLTRB(18, 0, 18, 110),
           content: Row(
             children: [
               Icon(icon, color: scheme.inversePrimary, size: 22),
               const SizedBox(width: 11),
-              Expanded(child: Text(message)),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    color: scheme.onInverseSurface,
+                    fontWeight: FontWeight.w600,
+                    height: 1.45,
+                  ),
+                ),
+              ),
             ],
           ),
-          duration: const Duration(seconds: 3),
         ),
       );
   }
 }
 
-// ─── BOTTOM BAR ──────────────────────────────────────────────────
+// ---------- Status kosong ----------
 
-class _BarItem {
+class RasaEmptyState extends StatelessWidget {
   final IconData icon;
-  final String label;
-  const _BarItem(this.icon, this.label);
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  const RasaEmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 34, horizontal: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Icon(icon, size: 44, color: scheme.primary),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            title,
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              height: 1.55,
+            ),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 20),
+            RasaButton(
+              label: actionLabel!,
+              icon: Icons.add_rounded,
+              onPressed: onAction,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
-/// Bottom bar total custom (pengganti NavigationBar bawaan).
+// ---------- Bottom bar ----------
+
+/// Bottom bar khas RASA: 5 slot, tombol + solid mengambang di tengah.
 class RasaBottomBar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onTap;
   const RasaBottomBar({super.key, required this.index, required this.onTap});
 
   static const _items = [
-    _BarItem(Icons.home_rounded, 'Beranda'),
-    _BarItem(Icons.auto_awesome_rounded, 'AI Teman'),
-    _BarItem(Icons.add_rounded, 'Curhat'),
-    _BarItem(Icons.casino_rounded, 'Biliar'),
-    _BarItem(Icons.person_rounded, 'Profil'),
+    (Icons.home_rounded, 'Beranda'),
+    (Icons.auto_awesome_rounded, 'AI'),
+    (Icons.add_rounded, ''),
+    (Icons.casino_rounded, 'Biliar'),
+    (Icons.person_rounded, 'Saya'),
   ];
 
   @override
@@ -1573,109 +2012,113 @@ class RasaBottomBar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return SafeArea(
       top: false,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: scheme.outlineVariant),
-          boxShadow: RasaShadows.soft(scheme),
-        ),
-        child: Row(
-          children: [
-            for (var i = 0; i < _items.length; i++)
-              if (i == 2)
-                _BarCenter(onTap: () => onTap(2))
-              else
-                Expanded(
-                  child: _BarEntry(
-                    item: _items[i],
-                    selected: index == i,
-                    onTap: () => onTap(i),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: Container(
+          height: 74,
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: scheme.outlineVariant),
+            boxShadow: RasaShadows.soft(scheme),
+          ),
+          child: Row(
+            children: [
+              for (int i = 0; i < _items.length; i++)
+                if (i == 2)
+                  Expanded(
+                    child: Center(
+                      child: _PressScale(
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            onTap(i);
+                          },
+                          child: Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              color: scheme.primary,
+                              shape: BoxShape.circle,
+                              boxShadow: RasaShadows.pop(scheme),
+                            ),
+                            child: Icon(
+                              Icons.add_rounded,
+                              size: 30,
+                              color: scheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: _PressScale(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onTap(i);
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedContainer(
+                              duration:
+                                  const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 17, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: index == i
+                                    ? scheme.primaryContainer
+                                    : Colors.transparent,
+                                borderRadius:
+                                    BorderRadius.circular(999),
+                              ),
+                              child: Icon(
+                                _items[i].$1,
+                                size: 23,
+                                color: index == i
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _items[i].$2,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: index == i
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: index == i
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BarEntry extends StatelessWidget {
-  final _BarItem item;
-  final bool selected;
-  final VoidCallback onTap;
-  const _BarEntry({
-    required this.item,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: selected ? rasaGradient(scheme) : null,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: selected ? RasaShadows.glow(scheme) : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              item.icon,
-              size: 22,
-              color: selected ? scheme.onPrimary : scheme.onSurfaceVariant,
-            ),
-            if (selected) ...[
-              const SizedBox(width: 7),
-              Flexible(
-                child: Text(
-                  item.label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    color: scheme.onPrimary,
-                  ),
-                ),
-              ),
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _BarCenter extends StatelessWidget {
-  final VoidCallback onTap;
-  const _BarCenter({required this.onTap});
+// ---------- Util ----------
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 58,
-        height: 58,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          gradient: rasaGradient(scheme),
-          shape: BoxShape.circle,
-          boxShadow: RasaShadows.glow(scheme),
-        ),
-        child: Icon(Icons.add_rounded, color: scheme.onPrimary, size: 30),
-      ),
-    );
-  }
+/// Format waktu Bahasa Indonesia ("5 mnt lalu").
+String timeId(DateTime t) {
+  final d = DateTime.now().difference(t);
+  if (d.inSeconds < 60) return 'baru saja';
+  if (d.inMinutes < 60) return '${d.inMinutes} mnt lalu';
+  if (d.inHours < 24) return '${d.inHours} jam lalu';
+  if (d.inDays < 7) return '${d.inDays} hari lalu';
+  return '${t.day}/${t.month}/${t.year}';
 }

@@ -81,7 +81,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
             decoration: BoxDecoration(
-              gradient: rasaGradient(scheme),
+              color: scheme.primary,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Row(

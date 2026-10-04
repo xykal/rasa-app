@@ -1,60 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// RASA Design System — total custom, nol vibes bawaan Android:
-/// font Plus Jakarta Sans, transisi fade-slide, scroll memantul tanpa glow,
-/// splash InkSparkle, status bar transparan edge-to-edge.
+/// RASA Flat v2 — design system solid, tenang, premium.
+/// Satu warna brand + satu warna AI. Tanpa gradasi, tanpa glow neon.
+/// Palet adaptif penuh: tiap warna punya pasangan terang & gelap.
 class AppTheme {
   AppTheme._();
 
-  static const String fontFamily = 'PlusJakartaSans';
-
-  static const Color brand = Color(0xFF6C4CF1);
-  static const Color brandDeep = Color(0xFF4A2FBF);
+  // Brand: violet tenang (solid, tidak neon).
+  static const _brand = Color(0xFF5A3EE6);
+  static const _brandDark = Color(0xFFA89BFF);
+  // Warna kedua: hijau AI — hanya untuk hal berbau AI.
+  static const _ai = Color(0xFF2E9E66);
+  static const _aiDark = Color(0xFF7BD3A2);
 
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: brand,
+    const scheme = ColorScheme(
       brightness: Brightness.light,
-      surface: const Color(0xFFFAF8FF),
+      primary: _brand,
+      onPrimary: Colors.white,
+      primaryContainer: Color(0xFFE5DEFF),
+      onPrimaryContainer: Color(0xFF27156F),
+      secondary: Color(0xFF5B576B),
+      onSecondary: Colors.white,
+      secondaryContainer: Color(0xFFE3E0EB),
+      onSecondaryContainer: Color(0xFF1C1A24),
+      tertiary: _ai,
+      onTertiary: Colors.white,
+      tertiaryContainer: Color(0xFFCBEDD9),
+      onTertiaryContainer: Color(0xFF0A3B23),
+      error: Color(0xFFD64545),
+      onError: Colors.white,
+      errorContainer: Color(0xFFF9DEDC),
+      onErrorContainer: Color(0xFF410E0B),
+      surface: Color(0xFFFBFAFE),
+      onSurface: Color(0xFF191823),
+      onSurfaceVariant: Color(0xFF54546A),
+      outline: Color(0xFF7A7590),
+      outlineVariant: Color(0xFFC9C5D6),
+      surfaceContainerLowest: Colors.white,
+      surfaceContainerLow: Color(0xFFF3F1F8),
+      surfaceContainer: Color(0xFFECEAF2),
+      surfaceContainerHigh: Color(0xFFE6E3EC),
+      surfaceContainerHighest: Color(0xFFE0DDE6),
+      inverseSurface: Color(0xFF23222E),
+      onInverseSurface: Color(0xFFF4F2FA),
+      surfaceTint: _brand,
+      scrim: Colors.black,
     );
-    return _base(scheme, Brightness.light);
+    return _build(scheme);
   }
 
   static ThemeData dark() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: brand,
+    const scheme = ColorScheme(
       brightness: Brightness.dark,
-      surface: const Color(0xFF14101F),
+      primary: _brandDark,
+      onPrimary: Color(0xFF27156F),
+      primaryContainer: Color(0xFF3A2A7D),
+      onPrimaryContainer: Color(0xFFE5DEFF),
+      secondary: Color(0xFFC9C5D8),
+      onSecondary: Color(0xFF2E2B3D),
+      secondaryContainer: Color(0xFF44415A),
+      onSecondaryContainer: Color(0xFFE8E4F2),
+      tertiary: _aiDark,
+      onTertiary: Color(0xFF06301B),
+      tertiaryContainer: Color(0xFF0E3B24),
+      onTertiaryContainer: Color(0xFFCBEDD9),
+      error: Color(0xFFFFB4AB),
+      onError: Color(0xFF690005),
+      errorContainer: Color(0xFF93000A),
+      onErrorContainer: Color(0xFFFFDAD6),
+      surface: Color(0xFF12111A),
+      onSurface: Color(0xFFE7E4F0),
+      onSurfaceVariant: Color(0xFFA5A1B8),
+      outline: Color(0xFF8E8A9E),
+      outlineVariant: Color(0xFF484554),
+      surfaceContainerLowest: Color(0xFF0C0B12),
+      surfaceContainerLow: Color(0xFF171622),
+      surfaceContainer: Color(0xFF1C1B27),
+      surfaceContainerHigh: Color(0xFF26252F),
+      surfaceContainerHighest: Color(0xFF302F3B),
+      inverseSurface: Color(0xFFE7E4F0),
+      onInverseSurface: Color(0xFF1B1A24),
+      surfaceTint: _brandDark,
+      scrim: Colors.black,
     );
-    return _base(scheme, Brightness.dark);
+    return _build(scheme);
   }
 
-  static ThemeData _base(ColorScheme scheme, Brightness brightness) {
-    final dark = brightness == Brightness.dark;
+  static ThemeData _build(ColorScheme scheme) {
+    final dark = scheme.brightness == Brightness.dark;
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
-      fontFamily: fontFamily,
-      textTheme: _text(scheme),
-      splashFactory: InkSparkle.splashFactory,
-      pageTransitionsTheme: const PageTransitionsTheme(
-        builders: {
-          TargetPlatform.android: FadeSlidePageTransitionsBuilder(),
-          TargetPlatform.iOS: FadeSlidePageTransitionsBuilder(),
-          TargetPlatform.macOS: FadeSlidePageTransitionsBuilder(),
-          TargetPlatform.linux: FadeSlidePageTransitionsBuilder(),
-          TargetPlatform.windows: FadeSlidePageTransitionsBuilder(),
-          TargetPlatform.fuchsia: FadeSlidePageTransitionsBuilder(),
-        },
-      ),
+      // Font custom yang dibundel di assets/fonts.
+      fontFamily: 'PlusJakartaSans',
+      // Ikon status bar & nav bar ikut tema (edge-to-edge dari main.dart).
       appBarTheme: AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
-        scrolledUnderElevation: 0,
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
@@ -63,6 +111,21 @@ class AppTheme {
               dark ? Brightness.light : Brightness.dark,
         ),
       ),
+      // Splash tekan custom (lembut, tidak kotak).
+      splashFactory: InkSparkle.splashFactory,
+      highlightColor: Colors.transparent,
+      // Transisi halaman khas RASA: fade + slide pendek.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: _RasaPageTransition(),
+          TargetPlatform.iOS: _RasaPageTransition(),
+          TargetPlatform.macOS: _RasaPageTransition(),
+          TargetPlatform.windows: _RasaPageTransition(),
+          TargetPlatform.linux: _RasaPageTransition(),
+          TargetPlatform.fuchsia: _RasaPageTransition(),
+        },
+      ),
+      // Kartu bawaan (fallback) ikut bahasa bentuk RASA.
       cardTheme: CardThemeData(
         elevation: 0,
         color: scheme.surfaceContainerLow,
@@ -72,184 +135,67 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: scheme.surfaceContainerHigh,
+        backgroundColor: scheme.surfaceContainerLow,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(28),
         ),
       ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: scheme.surfaceContainerHigh,
-        showDragHandle: true,
-        dragHandleColor: scheme.outlineVariant,
-        shape: const RoundedRectangleBorder(
+      bottomSheetTheme: const BottomSheetThemeData(
+        elevation: 0,
+        showDragHandle: false,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          shape: const StadiumBorder(),
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
-          textStyle: const TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: scheme.inverseSurface,
+        contentTextStyle: TextStyle(color: scheme.onInverseSurface),
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          elevation: 0,
+      // Ketebalan teks CMaterial bawaan (fallback kalau widget custom
+      // tidak dipakai di suatu tempat).
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 54),
           shape: const StadiumBorder(),
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
-          textStyle: const TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 54),
           shape: const StadiumBorder(),
-          side: BorderSide(color: scheme.outline, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
-          textStyle: const TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(
-            fontFamily: fontFamily,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-      iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHighest,
-        hintStyle: TextStyle(color: scheme.onSurfaceVariant),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(22),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(22),
-          borderSide: BorderSide(color: scheme.primary, width: 2),
-        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
       ),
-      chipTheme: scheme.brightness == Brightness.dark
-          ? const ChipThemeData()
-          : const ChipThemeData(),
-      progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: scheme.primary,
-        linearTrackColor: scheme.surfaceContainerHighest,
-        circularTrackColor: scheme.surfaceContainerHighest,
-      ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: scheme.inverseSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-        contentTextStyle: TextStyle(
-          fontFamily: fontFamily,
-          color: scheme.onInverseSurface,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      tooltipTheme: TooltipThemeData(
-        decoration: BoxDecoration(
-          color: scheme.inverseSurface,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: TextStyle(
-          fontFamily: fontFamily,
-          fontSize: 12,
-          color: scheme.onInverseSurface,
-        ),
-      ),
-      dividerTheme: DividerThemeData(
-        color: scheme.outlineVariant,
-        thickness: 1,
-      ),
-      listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-      ),
-      tabBarTheme: TabBarThemeData(
-        indicator: BoxDecoration(
-          color: scheme.primary,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        labelStyle: const TextStyle(
-          fontFamily: fontFamily,
-          fontWeight: FontWeight.w800,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontFamily: fontFamily,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
-      ),
-    );
-  }
-
-  static TextTheme _text(ColorScheme scheme) {
-    TextStyle st(double size, FontWeight w, {double h = 1.3}) {
-      return TextStyle(
-        fontFamily: fontFamily,
-        fontSize: size,
-        fontWeight: w,
-        height: h,
-        color: scheme.onSurface,
-      );
-    }
-
-    return TextTheme(
-      displaySmall: st(32, FontWeight.w800, h: 1.2),
-      headlineSmall: st(24, FontWeight.w800, h: 1.25),
-      titleLarge: st(20, FontWeight.w800),
-      titleMedium: st(16, FontWeight.w700, h: 1.35),
-      titleSmall: st(14, FontWeight.w700, h: 1.35),
-      bodyLarge: st(16, FontWeight.w400, h: 1.55),
-      bodyMedium: st(14, FontWeight.w400, h: 1.55),
-      bodySmall: st(12, FontWeight.w400, h: 1.5),
-      labelLarge: st(14, FontWeight.w700),
-      labelMedium: st(12, FontWeight.w700),
-      labelSmall: st(11, FontWeight.w600),
     );
   }
 }
 
-/// Transisi halaman khas RASA: fade + geser halus.
-/// Menggantikan transisi bawaan Android & iOS di semua platform.
-class FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
-  const FadeSlidePageTransitionsBuilder();
+/// Transisi fade + slide 260ms — terasa mulus di 60Hz maupun 120Hz.
+class _RasaPageTransition extends PageTransitionsBuilder {
+  const _RasaPageTransition();
 
   @override
   Widget buildTransitions<T>(
@@ -267,31 +213,27 @@ class FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
     return FadeTransition(
       opacity: curved,
       child: SlideTransition(
-        position:
-            Tween<Offset>(begin: const Offset(0.05, 0.03), end: Offset.zero)
-                .animate(curved),
+        position: Tween<Offset>(
+          begin: const Offset(0.06, 0),
+          end: Offset.zero,
+        ).animate(curved),
         child: child,
       ),
     );
   }
 }
 
-/// Scroll khas RASA: memantul + TANPA glow Android.
+/// Scroll khas RASA: memantul lembut, tanpa glow biru Android.
 class RasaScrollBehavior extends ScrollBehavior {
   const RasaScrollBehavior();
 
   @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics());
-  }
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
 
   @override
   Widget buildOverscrollIndicator(
-    BuildContext context,
-    Widget child,
-    ScrollableDetails details,
-  ) {
-    return child;
+      BuildContext context, Widget child, ScrollableDetails details) {
+    return child; // glow biru dimatikan
   }
 }

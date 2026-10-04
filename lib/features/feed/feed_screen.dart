@@ -40,7 +40,7 @@ class FeedScreen extends ConsumerWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
               decoration: BoxDecoration(
-                gradient: rasaGradient(scheme),
+                color: scheme.primary,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -60,7 +60,7 @@ class FeedScreen extends ConsumerWidget {
         ],
       ),
       body: feed.isEmpty
-          ? const RasaLoader(label: 'Memuat cerita')
+          ? const _FeedLoading()
           : RefreshIndicator(
               onRefresh: () => ref.read(feedProvider.notifier).reload(),
               color: scheme.primary,
@@ -180,6 +180,39 @@ class FeedScreen extends ConsumerWidget {
                 ],
               ),
             ),
+    );
+  }
+}
+
+/// Skeleton selagi feed dimuat — terasa instan, tanpa spinner.
+class _FeedLoading extends StatelessWidget {
+  const _FeedLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 110),
+      children: const [
+        RasaSkeleton(height: 56, radius: 20),
+        SizedBox(height: 14),
+        RasaSkeleton(height: 168, radius: 26),
+        SizedBox(height: 14),
+        Row(
+          children: [
+            RasaSkeleton(height: 40, width: 96, radius: 999),
+            SizedBox(width: 9),
+            RasaSkeleton(height: 40, width: 110, radius: 999),
+            SizedBox(width: 9),
+            RasaSkeleton(height: 40, width: 104, radius: 999),
+          ],
+        ),
+        SizedBox(height: 14),
+        RasaSkeleton(height: 190, radius: 26),
+        SizedBox(height: 12),
+        RasaSkeleton(height: 170, radius: 26),
+        SizedBox(height: 12),
+        RasaSkeleton(height: 180, radius: 26),
+      ],
     );
   }
 }

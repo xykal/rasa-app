@@ -66,9 +66,9 @@ class ProfileScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: rasaGradient(scheme),
+              color: scheme.primary,
               borderRadius: BorderRadius.circular(28),
-              boxShadow: RasaShadows.glow(scheme),
+              boxShadow: RasaShadows.soft(scheme),
             ),
             child: Row(
               children: [
@@ -346,7 +346,7 @@ class _Stat extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: rasaGradient(scheme),
+                color: scheme.primary,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: scheme.onPrimary, size: 20),

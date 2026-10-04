@@ -129,12 +129,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    gradient: rasaGradient(scheme),
+                    color: scheme.tertiary,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
                     Icons.auto_awesome_rounded,
-                    color: scheme.onPrimary,
+                    color: scheme.onTertiary,
                     size: 22,
                   ),
                 ),

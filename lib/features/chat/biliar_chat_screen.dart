@@ -171,9 +171,9 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
               height: 116,
               width: 116,
               decoration: BoxDecoration(
-                gradient: rasaGradient(scheme),
+                color: scheme.primary,
                 borderRadius: BorderRadius.circular(36),
-                boxShadow: RasaShadows.glow(scheme),
+                boxShadow: RasaShadows.soft(scheme),
               ),
               child: Icon(
                 Icons.casino_rounded,
@@ -217,9 +217,9 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
           margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            gradient: rasaGradient(scheme),
+            color: scheme.primary,
             borderRadius: BorderRadius.circular(22),
-            boxShadow: RasaShadows.glow(scheme),
+            boxShadow: RasaShadows.soft(scheme),
           ),
           child: Row(
             children: [
