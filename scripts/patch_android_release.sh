@@ -36,27 +36,45 @@ cat > "$APP_DIR/proguard-rules.pro" <<'EOF'
 EOF
 echo "proguard-rules.pro ditulis"
 
-# 2. Append signing + R8 ke build script (deteksi DSL)
+# 2. Patch build script (deteksi DSL)
 if [ -f "$KTS" ]; then
   echo "terdeteksi Kotlin DSL (build.gradle.kts)"
   if grep -q "$MARKER" "$KTS"; then
     echo "sudah di-patch, lewati"
     exit 0
   fi
+  # 2a. Sisipkan import setelah blok plugins (pola resmi docs Flutter).
+  #     WAJIB via import: accessor `java` di Kotlin DSL menimpa paket java.*,
+  #     jadi `java.util.Properties` fully-qualified TIDAK bisa dipakai.
+  python3 - "$KTS" <<'PYEOF'
+import sys
+path = sys.argv[1]
+t = open(path).read()
+if 'java.util.Properties' not in t:
+    lines = t.split('\n')
+    idx = next(i for i, l in enumerate(lines) if l.strip() == '}')
+    lines.insert(idx + 1, 'import java.util.Properties\nimport java.io.FileInputStream')
+    open(path, 'w').write('\n'.join(lines))
+    print('import disisipkan')
+else:
+    print('import sudah ada, lewati')
+PYEOF
+  # 2b. Append signing + R8 (pola resmi docs Flutter).
   cat >> "$KTS" <<'EOF'
 
 // ==== RASA release patch: signing resmi + R8 ====
-val rasaKeyProps = java.util.Properties().apply {
-    val f = rootProject.file("key.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 android {
     signingConfigs {
         create("release") {
-            storeFile = file(rasaKeyProps.getProperty("storeFile", "upload-keystore.jks"))
-            storePassword = rasaKeyProps.getProperty("storePassword", "")
-            keyAlias = rasaKeyProps.getProperty("keyAlias", "")
-            keyPassword = rasaKeyProps.getProperty("keyPassword", "")
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as String
         }
     }
     buildTypes {
