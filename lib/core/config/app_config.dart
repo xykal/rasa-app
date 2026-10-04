@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 /// - Demo tanpa Firebase : langsung `flutter run` (default DEMO_MODE=true)
 /// - Production          : flutter build apk --dart-define=DEMO_MODE=false
 /// - API key Gemini      : --dart-define=GEMINI_KEY=xxx
-library;
 
 class AppConfig {
   AppConfig._();

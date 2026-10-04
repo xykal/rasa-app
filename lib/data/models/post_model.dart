@@ -1,6 +1,5 @@
 /// RASA Models — Post, Reply, ChatMsg.
 /// fromMap/toMap disamakan dengan struktur Firestore (lihat SETUP.md).
-library;
 
 class RasaPost {
   final String id;
