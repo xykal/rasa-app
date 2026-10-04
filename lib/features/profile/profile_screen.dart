@@ -14,37 +14,36 @@ class ProfileScreen extends ConsumerWidget {
   Future<void> _editAlias(
       BuildContext context, WidgetRef ref, String current) async {
     final ctrl = TextEditingController(text: current);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ubah Nama Samaran'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          maxLength: AppConfig.maxAliasLength,
-          decoration: const InputDecoration(
-            hintText: 'Contoh: Senja Tenang',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Simpan'),
-          ),
-        ],
+    final result = await showRasaDialog<String>(
+      context,
+      icon: Icons.edit_outlined,
+      title: 'Ubah Nama Samaran',
+      message: 'Pilih nama samaran baru. Maksimal ${AppConfig.maxAliasLength} karakter.',
+      content: RasaTextField(
+        controller: ctrl,
+        hint: 'Contoh: Senja Tenang',
+        maxLength: AppConfig.maxAliasLength,
+        autofocus: true,
+        onSubmitted: (_) => Navigator.pop(context, ctrl.text.trim()),
       ),
+      actions: [
+        RasaTonalButton(
+          label: 'Batal',
+          onPressed: () => Navigator.pop(context),
+        ),
+        _SaveAliasButton(controller: ctrl),
+      ],
     );
+    ctrl.dispose();
     if (result == null || result.isEmpty || !context.mounted) return;
     final err = await ref.read(sessionProvider.notifier).setAlias(result);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(err ?? 'Nama samaran diperbarui.'),
-      ),
+    RasaSnack.show(
+      context,
+      err ?? 'Nama samaran diperbarui.',
+      icon: err == null
+          ? Icons.check_circle_rounded
+          : Icons.info_outline_rounded,
     );
   }
 
@@ -60,34 +59,40 @@ class ProfileScreen extends ConsumerWidget {
     final hugs = myPosts.fold<int>(0, (s, p) => s + p.hugCount);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: const RasaAppBar(title: 'Profil'),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 110),
         children: [
-          // Kartu identitas
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [scheme.primary, scheme.tertiary],
-              ),
-              borderRadius: BorderRadius.circular(20),
+              gradient: rasaGradient(scheme),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: RasaShadows.glow(scheme),
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: scheme.onPrimary.withValues(alpha: 0.25),
-                  child: Text(
-                    session.alias.isEmpty ? 'R' : session.alias[0],
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: scheme.onPrimary,
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.22),
+                  ),
+                  child: Center(
+                    child: Text(
+                      session.alias.isEmpty
+                          ? 'R'
+                          : session.alias.trim()[0].toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: scheme.onPrimary,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,67 +105,71 @@ class ProfileScreen extends ConsumerWidget {
                           color: scheme.onPrimary,
                         ),
                       ),
+                      const SizedBox(height: 3),
                       Text(
                         'Anggota anonim',
                         style: TextStyle(
-                          color: scheme.onPrimary.withValues(alpha: 0.8),
+                          color: scheme.onPrimary.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () => _editAlias(context, ref, session.alias),
-                  icon: Icon(Icons.edit_outlined, color: scheme.onPrimary),
-                  tooltip: 'Ubah nama samaran',
+                _RoundIconButton(
+                  icon: Icons.edit_outlined,
+                  onTap: () => _editAlias(context, ref, session.alias),
                 ),
-                IconButton(
-                  onPressed: () =>
+                const SizedBox(width: 8),
+                _RoundIconButton(
+                  icon: Icons.shuffle_rounded,
+                  onTap: () =>
                       ref.read(sessionProvider.notifier).shuffleAlias(),
-                  icon: Icon(Icons.shuffle, color: scheme.onPrimary),
-                  tooltip: 'Acak nama samaran',
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Statistik
+          const SizedBox(height: 14),
           Row(
             children: [
               _Stat(
-                icon: Icons.local_fire_department,
+                icon: Icons.local_fire_department_rounded,
                 value: '${session.streak} hari',
                 label: 'Streak',
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               _Stat(
-                icon: Icons.edit_note,
+                icon: Icons.edit_note_rounded,
                 value: '${myPosts.length}',
                 label: 'Cerita',
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               _Stat(
-                icon: Icons.volunteer_activism,
+                icon: Icons.volunteer_activism_rounded,
                 value: '$hugs',
                 label: 'Dukungan',
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
           const SectionTitle('Cerita Saya'),
           if (myPosts.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            RasaCard(
               child: Row(
                 children: [
-                  Icon(Icons.nights_stay_outlined,
-                      color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 12),
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: scheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Icon(
+                      Icons.nights_stay_outlined,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 13),
                   Expanded(
                     child: Text(
                       'Kamu belum pernah bercerita. Cerita pertamamu ditunggu.',
@@ -181,109 +190,134 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
             ],
-
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
           const SectionTitle('Tampilan'),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SegmentedButton<ThemeMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: ThemeMode.light,
-                    icon: Icon(Icons.light_mode),
-                    label: Text('Terang'),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.system,
-                    icon: Icon(Icons.brightness_auto),
-                    label: Text('Auto'),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.dark,
-                    icon: Icon(Icons.dark_mode),
-                    label: Text('Gelap'),
-                  ),
-                ],
-                selected: {themeMode},
-                onSelectionChanged: (s) =>
-                    ref.read(themeModeProvider.notifier).setMode(s.first),
+          RasaSegmented<ThemeMode>(
+            segments: const [
+              RasaSegment(
+                value: ThemeMode.light,
+                icon: Icons.light_mode_rounded,
+                label: 'Terang',
               ),
-            ),
+              RasaSegment(
+                value: ThemeMode.system,
+                icon: Icons.brightness_auto_rounded,
+                label: 'Auto',
+              ),
+              RasaSegment(
+                value: ThemeMode.dark,
+                icon: Icons.dark_mode_rounded,
+                label: 'Gelap',
+              ),
+            ],
+            value: themeMode,
+            onChanged: (m) =>
+                ref.read(themeModeProvider.notifier).setMode(m),
           ),
-
-          const SizedBox(height: 12),
+          const SizedBox(height: 22),
           const SectionTitle('Pengaturan'),
-          Card(
-            child: SwitchListTile(
-              secondary: const Icon(Icons.science_outlined),
-              title: const Text('Mode Demo (data lokal)'),
-              subtitle: Text(
-                isDemo
-                    ? 'Aktif — berjalan tanpa Firebase, cocok untuk review'
-                    : 'Nonaktif — memakai Firebase production',
-                style: const TextStyle(fontSize: 12),
-              ),
+          RasaSettingTile(
+            icon: Icons.science_outlined,
+            title: 'Mode Demo (data lokal)',
+            subtitle: isDemo
+                ? 'Aktif — berjalan tanpa Firebase, cocok untuk review'
+                : 'Nonaktif — memakai Firebase production',
+            trailing: RasaSwitch(
               value: isDemo,
               onChanged: (v) {
                 ref.read(demoModeProvider.notifier).state = v;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(v
-                        ? 'Mode demo aktif — mulai ulang aplikasi untuk hasil penuh'
-                        : 'Mode Firebase aktif — pastikan google-services.json sudah dipasang'),
-                  ),
-                );
-              },
-            ),
-          ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: Text('Tentang ${AppConfig.appName}'),
-              subtitle: const Text(
-                  'v${AppConfig.version} • Flutter + Firebase + Gemini AI'),
-              onTap: () => showAboutDialog(
-                context: context,
-                applicationName: AppConfig.appName,
-                applicationVersion: AppConfig.version,
-                children: const [
-                  Text(
-                    'RASA adalah ruang aman untuk bercerita secara anonim, ditemani AI dan sesama pengguna. Dibuat di Indonesia.',
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.restart_alt, color: scheme.error),
-              title:
-                  Text('Reset demo', style: TextStyle(color: scheme.error)),
-              subtitle: const Text('Hapus nama samaran dan status onboarding'),
-              onTap: () async {
-                final ok = await confirmDelete(
+                RasaSnack.show(
                   context,
-                  'Seluruh data demo lokal akan dihapus dan onboarding tampil lagi.',
+                  v
+                      ? 'Mode demo aktif — mulai ulang aplikasi untuk hasil penuh'
+                      : 'Mode Firebase aktif — pastikan google-services.json sudah dipasang',
+                  icon: Icons.science_outlined,
                 );
-                if (!ok || !context.mounted) return;
-                final p = await SharedPreferences.getInstance();
-                await p.clear();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          'Direset. Mulai ulang aplikasi untuk melihat onboarding lagi.'),
-                    ),
-                  );
-                }
               },
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 10),
+          RasaSettingTile(
+            icon: Icons.info_outline_rounded,
+            title: 'Tentang ${AppConfig.appName}',
+            subtitle:
+                'v${AppConfig.version} • Flutter + Firebase + Gemini AI',
+            onTap: () => showRasaDialog<void>(
+              context,
+              icon: Icons.spa_rounded,
+              title: AppConfig.appName,
+              message:
+                  'RASA v${AppConfig.version} — ruang aman untuk bercerita secara anonim, ditemani AI dan sesama pengguna. Dibuat di Indonesia.',
+              actions: [
+                RasaButton(
+                  label: 'Tutup',
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          RasaSettingTile(
+            icon: Icons.restart_alt_rounded,
+            title: 'Reset demo',
+            subtitle: 'Hapus nama samaran dan status onboarding',
+            danger: true,
+            onTap: () async {
+              final ok = await confirmDelete(
+                context,
+                'Seluruh data demo lokal akan dihapus dan onboarding tampil lagi.',
+              );
+              if (!ok || !context.mounted) return;
+              final p = await SharedPreferences.getInstance();
+              await p.clear();
+              if (context.mounted) {
+                RasaSnack.show(
+                  context,
+                  'Direset. Mulai ulang aplikasi untuk melihat onboarding lagi.',
+                  icon: Icons.restart_alt_rounded,
+                );
+              }
+            },
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SaveAliasButton extends StatelessWidget {
+  final TextEditingController controller;
+  const _SaveAliasButton({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return RasaButton(
+      label: 'Simpan',
+      onPressed: () => Navigator.pop(context, controller.text.trim()),
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _RoundIconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Icon(icon, color: scheme.onPrimary, size: 21),
       ),
     );
   }
@@ -300,15 +334,24 @@ class _Stat extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: scheme.outlineVariant),
         ),
         child: Column(
           children: [
-            Icon(icon, color: scheme.primary),
-            const SizedBox(height: 4),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: rasaGradient(scheme),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: scheme.onPrimary, size: 20),
+            ),
+            const SizedBox(height: 8),
             Text(value,
                 style: const TextStyle(fontWeight: FontWeight.w800)),
             Text(label,

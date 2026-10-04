@@ -30,26 +30,17 @@ class FeedScreen extends ConsumerWidget {
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const RasaLogo(size: 30),
-            const SizedBox(width: 8),
-            Text(
-              AppConfig.appName,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w900, letterSpacing: 2),
-            ),
-          ],
-        ),
+      appBar: RasaAppBar(
+        title: AppConfig.appName,
+        showLogo: true,
         actions: [
           if (isDemo)
             Container(
-              margin: const EdgeInsets.only(right: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.only(right: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
               decoration: BoxDecoration(
-                color: scheme.tertiaryContainer,
+                gradient: rasaGradient(scheme),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -57,48 +48,43 @@ class FeedScreen extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: scheme.onTertiaryContainer,
+                  letterSpacing: 1,
+                  color: scheme.onPrimary,
                 ),
               ),
             ),
-          Chip(
-            avatar: Icon(
-              Icons.local_fire_department,
-              size: 16,
-              color: scheme.primary,
-            ),
-            label: Text('${session.streak}'),
-            visualDensity: VisualDensity.compact,
+          RasaMiniBadge(
+            icon: Icons.local_fire_department_rounded,
+            label: '${session.streak}',
           ),
-          const SizedBox(width: 12),
         ],
       ),
       body: feed.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? const RasaLoader(label: 'Memuat cerita')
           : RefreshIndicator(
               onRefresh: () => ref.read(feedProvider.notifier).reload(),
+              color: scheme.primary,
+              backgroundColor: scheme.surfaceContainerHigh,
+              strokeWidth: 2.5,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 110),
                 children: [
-                  // Pencarian
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Cari cerita atau nama samaran',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: q.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () => ref
-                                  .read(searchQueryProvider.notifier)
-                                  .state = '',
-                            ),
-                    ),
+                  RasaTextField(
+                    hint: 'Cari cerita atau nama samaran',
+                    prefix: Icons.search_rounded,
+                    suffix: q.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 20),
+                            onPressed: () => ref
+                                .read(searchQueryProvider.notifier)
+                                .state = '',
+                          ),
                     onChanged: (v) => ref
                         .read(searchQueryProvider.notifier)
                         .state = v,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   DailyQuestionCard(
                     question: question,
                     onAnswer: () => Navigator.of(context).push(
@@ -109,25 +95,25 @@ class FeedScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        ChoiceChip(
-                          avatar: const Icon(Icons.apps, size: 18),
-                          label: const Text('Semua'),
+                        RasaChip(
+                          icon: Icons.apps_rounded,
+                          label: 'Semua',
                           selected: filter == null,
                           onSelected: (_) => ref
                               .read(moodFilterProvider.notifier)
                               .state = null,
                         ),
                         for (final m in kMoods) ...[
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            avatar:
-                                Icon(m.icon, size: 18, color: m.color),
-                            label: Text(m.label),
+                          const SizedBox(width: 9),
+                          RasaChip(
+                            icon: m.icon,
+                            iconColor: m.color,
+                            label: m.label,
                             selected: filter == m.id,
                             onSelected: (_) => ref
                                 .read(moodFilterProvider.notifier)
@@ -137,22 +123,23 @@ class FeedScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   if (q.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: 10),
                       child: Text(
                         '${posts.length} hasil untuk "$query"',
                         style: TextStyle(
                           fontSize: 13,
+                          fontWeight: FontWeight.w600,
                           color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ),
                   if (posts.isEmpty)
-                    EmptyFeed(
+                    RasaEmptyState(
                       icon: q.isNotEmpty
-                          ? Icons.search_off
+                          ? Icons.search_off_rounded
                           : Icons.forum_outlined,
                       title: q.isNotEmpty
                           ? 'Tidak ditemukan'
@@ -160,6 +147,16 @@ class FeedScreen extends ConsumerWidget {
                       message: q.isNotEmpty
                           ? 'Coba kata kunci lain atau ubah filter mood.'
                           : 'Jadilah yang pertama berbagi di sini.',
+                      actionLabel:
+                          q.isNotEmpty ? null : 'Tulis Cerita',
+                      onAction: q.isNotEmpty
+                          ? null
+                          : () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CreatePostScreen(),
+                                ),
+                              ),
                     )
                   else
                     for (final p in posts) ...[
@@ -178,9 +175,8 @@ class FeedScreen extends ConsumerWidget {
                             .toggleMeToo(p.id),
                         onReport: () => showReportSheet(context, p.id),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                     ],
-                  const SizedBox(height: 24),
                 ],
               ),
             ),

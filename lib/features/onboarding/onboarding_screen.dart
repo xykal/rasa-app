@@ -24,33 +24,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           children: [
-            const SizedBox(height: 16),
-            const RasaLogo(size: 88),
+            const SizedBox(height: 12),
+            const RasaLogo(size: 92),
             const SizedBox(height: 20),
             Text(
               AppConfig.appName,
               style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 4,
+                fontSize: 42,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 5,
                 color: scheme.primary,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               AppConfig.tagline,
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15),
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 26),
             const _Step(
-              icon: Icons.visibility_off,
+              icon: Icons.visibility_off_rounded,
               title: 'Anonim Penuh',
               desc: 'Tanpa nama asli, tanpa foto. Hanya kamu dan ceritamu.',
             ),
             const _Step(
-              icon: Icons.auto_awesome,
+              icon: Icons.auto_awesome_rounded,
               title: 'Didampingi AI dan Komunitas',
               desc: 'Setiap cerita langsung direspons AI, lalu ditemani sesama pengguna.',
             ),
@@ -59,31 +63,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               title: 'Ruang Aman',
               desc: 'Moderasi aktif dan filter otomatis menjaga percakapan tetap sehat.',
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
             const SectionTitle('Nama samaranmu'),
             Row(
               children: [
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                        horizontal: 16, vertical: 15),
                     decoration: BoxDecoration(
-                      color: scheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
+                      gradient: rasaGradient(scheme),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: RasaShadows.glow(scheme),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.account_circle_outlined,
-                          color: scheme.onPrimaryContainer,
+                          color: scheme.onPrimary,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             session.alias,
                             style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: scheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: scheme.onPrimary,
                             ),
                           ),
                         ),
@@ -91,12 +97,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: () =>
+                const SizedBox(width: 10),
+                RasaShuffleButton(
+                  onTap: () =>
                       ref.read(sessionProvider.notifier).shuffleAlias(),
-                  icon: const Icon(Icons.shuffle),
-                  tooltip: 'Acak nama lain',
                 ),
               ],
             ),
@@ -106,18 +110,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               selected: _mood,
               onPick: (m) => setState(() => _mood = m),
             ),
-            const SizedBox(height: 28),
-            FilledButton.icon(
+            const SizedBox(height: 30),
+            RasaButton(
+              label: 'Mulai Bercerita',
+              icon: Icons.arrow_forward_rounded,
               onPressed: () => ref
                   .read(sessionProvider.notifier)
                   .finishOnboarding(_mood),
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text(
-                'Mulai Bercerita',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Text(
               'Dengan melanjutkan, kamu setuju untuk menjaga percakapan tetap sehat dan saling menghargai.',
               textAlign: TextAlign.center,
@@ -125,6 +126,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class RasaShuffleButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const RasaShuffleButton({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Icon(Icons.shuffle_rounded, color: scheme.primary),
       ),
     );
   }
@@ -140,29 +164,33 @@ class _Step extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: scheme.secondaryContainer,
-            child: Icon(
-              icon,
-              size: 18,
-              color: scheme.onSecondaryContainer,
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              gradient: rasaGradient(scheme),
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: Icon(icon, size: 22, color: scheme.onPrimary),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 13),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
                 Text(desc,
                     style: TextStyle(
-                        fontSize: 13, color: scheme.onSurfaceVariant)),
+                        fontSize: 13,
+                        color: scheme.onSurfaceVariant,
+                        height: 1.45)),
               ],
             ),
           ),

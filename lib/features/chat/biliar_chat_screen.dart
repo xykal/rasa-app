@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/widgets/rasa_widgets.dart';
 import '../../data/models/post_model.dart';
 
 /// BILIAR CHAT — mengobrol anonim acak 1-on-1 dengan batas waktu.
@@ -62,7 +63,6 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
       _phase = _Phase.searching;
       _msgs.clear();
     });
-    // Simulasi matchmaking 2 detik
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted || _phase != _Phase.searching) return;
       setState(() {
@@ -92,12 +92,12 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
   void _endChat({bool timeout = false}) {
     _botTimer?.cancel();
     setState(() => _phase = _Phase.idle);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(timeout
-            ? 'Waktu mengobrol habis. Terima kasih sudah menemani $_partner.'
-            : 'Obrolan selesai. Semoga harimu terasa lebih ringan.'),
-      ),
+    RasaSnack.show(
+      context,
+      timeout
+          ? 'Waktu mengobrol habis. Terima kasih sudah menemani $_partner.'
+          : 'Obrolan selesai. Semoga harimu terasa lebih ringan.',
+      icon: Icons.timer_outlined,
     );
   }
 
@@ -107,7 +107,6 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
     _ctrl.clear();
     setState(() => _msgs.add(ChatMsg(text, true, DateTime.now())));
     _toBottom();
-    // Balasan simulasi dengan jeda natural
     Future.delayed(Duration(milliseconds: 1200 + _rnd.nextInt(1500)), () {
       if (!mounted || _phase != _Phase.chatting) return;
       setState(() => _msgs.add(ChatMsg(
@@ -138,35 +137,30 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Biliar Chat'),
+      appBar: RasaAppBar(
+        title: 'Biliar Chat',
         actions: [
           if (_phase == _Phase.chatting)
             Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Chip(
-                avatar: Icon(
-                  Icons.timer_outlined,
-                  size: 16,
-                  color: scheme.primary,
-                ),
-                label: Text(_timerText),
-                visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.only(right: 6),
+              child: RasaMiniBadge(
+                icon: Icons.timer_outlined,
+                label: _timerText,
               ),
             ),
         ],
       ),
       body: switch (_phase) {
-        _Phase.idle => _idleView(scheme),
+        _Phase.idle => _idleView(),
         _Phase.searching => _searchingView(),
-        _Phase.chatting => _chatView(scheme),
+        _Phase.chatting => _chatView(),
       },
     );
   }
 
-  Widget _idleView(ColorScheme scheme) {
+  Widget _idleView() {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -174,34 +168,35 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              height: 110,
-              width: 110,
+              height: 116,
+              width: 116,
               decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(32),
+                gradient: rasaGradient(scheme),
+                borderRadius: BorderRadius.circular(36),
+                boxShadow: RasaShadows.glow(scheme),
               ),
               child: Icon(
-                Icons.casino,
-                size: 56,
-                color: scheme.onPrimaryContainer,
+                Icons.casino_rounded,
+                size: 58,
+                color: scheme.onPrimary,
               ),
             ),
-            const SizedBox(height: 20),
-            const Text(
+            const SizedBox(height: 22),
+            Text(
               'Ngobrol Acak 5 Menit',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 9),
             Text(
               'Dipertemukan dengan orang asing yang anonim.\nTidak cocok? Akhiri kapan pun, tanpa drama.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: scheme.onSurfaceVariant, height: 1.5),
+              style: TextStyle(color: scheme.onSurfaceVariant, height: 1.55),
             ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
+            const SizedBox(height: 26),
+            RasaButton(
+              label: 'Cari Teman Mengobrol',
+              icon: Icons.shuffle_rounded,
               onPressed: _startSearch,
-              icon: const Icon(Icons.shuffle),
-              label: const Text('Cari Teman Mengobrol'),
             ),
           ],
         ),
@@ -210,56 +205,65 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
   }
 
   Widget _searchingView() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 20),
-          const Text(
-            'Mencari teman mengobrol',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _cancelSearch,
-            child: const Text('Batalkan'),
-          ),
-        ],
-      ),
-    );
+    return const RasaLoader(label: 'Mencari teman mengobrol');
   }
 
-  Widget _chatView(ColorScheme scheme) {
+  Widget _chatView() {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         Container(
           width: double.infinity,
-          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+          padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            color: scheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(14),
+            gradient: rasaGradient(scheme),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: RasaShadows.glow(scheme),
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.account_circle_outlined,
-                color: scheme.onSecondaryContainer,
-              ),
-              const SizedBox(width: 8),
+              RasaAvatar(name: _partner, radius: 19),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Terhubung dengan $_partner (anonim)',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSecondaryContainer,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _partner,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: scheme.onPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Anonim • terhubung',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onPrimary.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              TextButton(
-                onPressed: _endChat,
-                child: const Text('Akhiri'),
+              GestureDetector(
+                onTap: _endChat,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 15, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    'Akhiri',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -267,60 +271,18 @@ class _BiliarChatScreenState extends State<BiliarChatScreen> {
         Expanded(
           child: ListView.builder(
             controller: _scroll,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
             itemCount: _msgs.length,
             itemBuilder: (ctx, i) {
               final m = _msgs[i];
-              return Align(
-                alignment:
-                    m.mine ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(ctx).size.width * .78,
-                  ),
-                  decoration: BoxDecoration(
-                    color: m.mine
-                        ? scheme.primary
-                        : scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(
-                    m.text,
-                    style: TextStyle(
-                      height: 1.45,
-                      color: m.mine ? scheme.onPrimary : scheme.onSurface,
-                    ),
-                  ),
-                ),
-              );
+              return ChatBubble(text: m.text, mine: m.mine);
             },
           ),
         ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Sapa dia',
-                    ),
-                    onSubmitted: (_) => _send(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: _send,
-                  icon: const Icon(Icons.send),
-                ),
-              ],
-            ),
-          ),
+        ChatComposer(
+          controller: _ctrl,
+          hint: 'Sapa dia',
+          onSend: _send,
         ),
       ],
     );

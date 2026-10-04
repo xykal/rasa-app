@@ -15,27 +15,25 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const RasaLogo(size: 84),
-            const SizedBox(height: 20),
+            const RasaLoader(size: 88),
+            const SizedBox(height: 22),
             Text(
               AppConfig.appName,
               style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 6,
+                fontSize: 38,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 7,
                 color: scheme.primary,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               AppConfig.tagline,
-              style: TextStyle(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 32),
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

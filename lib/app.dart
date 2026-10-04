@@ -51,6 +51,7 @@ class _RasaAppState extends ConsumerState<RasaApp> {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
+      scrollBehavior: const RasaScrollBehavior(),
       navigatorKey: OneSignalService.navigatorKey,
       home: home,
     );

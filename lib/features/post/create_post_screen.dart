@@ -42,14 +42,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     if (!mounted) return;
     setState(() => _sending = false);
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      RasaSnack.show(context, err, icon: Icons.info_outline_rounded);
       return;
     }
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cerita terkirim. AI sedang menyiapkan respons untukmu.'),
-      ),
+    RasaSnack.show(
+      context,
+      'Cerita terkirim. AI sedang menyiapkan respons untukmu.',
+      icon: Icons.auto_awesome_rounded,
     );
   }
 
@@ -59,96 +59,105 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cerita Baru'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilledButton.icon(
-              onPressed: _sending ? null : _send,
-              icon: _sending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send, size: 18),
-              label: const Text('Kirim'),
-            ),
-          ),
-        ],
-      ),
+      appBar: const RasaAppBar(title: 'Cerita Baru'),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
         children: [
-          Row(
-            children: [
-              MoodAvatar(mood: _mood, radius: 22),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+          RasaCard(
+            padding: const EdgeInsets.all(15),
+            child: Row(
+              children: [
+                MoodAvatar(mood: _mood, radius: 23),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.account_circle_outlined, size: 16),
-                      const SizedBox(width: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.account_circle_outlined,
+                            size: 16,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            session.alias,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
                       Text(
-                        session.alias,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        'Diposting sebagai anonim',
+                        style: TextStyle(
+                            fontSize: 12, color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ),
-                  Text(
-                    'Diposting sebagai anonim',
-                    style: TextStyle(
-                        fontSize: 12, color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           const SectionTitle('Mood kamu saat ini?'),
           MoodPicker(
             selected: _mood,
             onPick: (m) => setState(() => _mood = m),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           const SectionTitle('Ceritamu'),
-          TextField(
+          RasaTextField(
             controller: _ctrl,
             maxLines: 8,
             maxLength: AppConfig.maxPostLength,
             autofocus: true,
-            decoration: const InputDecoration(
-              hintText:
-                  'Tulis isi hatimu di sini. Tidak ada penilaian, semuanya aman.',
-            ),
+            hint: 'Tulis isi hatimu di sini. Tidak ada penilaian, semuanya aman.',
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: scheme.tertiaryContainer.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(16),
+              color: scheme.tertiaryContainer.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(22),
             ),
             child: Row(
               children: [
-                Icon(Icons.auto_awesome, color: scheme.tertiary),
-                const SizedBox(width: 10),
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: rasaGradient(scheme),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: scheme.onPrimary,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Setelah terkirim, RASA AI akan langsung merespons dan komunitas dapat memberikan dukungan.',
                     style: TextStyle(
                       fontSize: 13,
+                      height: 1.5,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 22),
+          RasaButton(
+            label: 'Kirim Cerita',
+            icon: Icons.send_rounded,
+            busy: _sending,
+            onPressed: _send,
           ),
         ],
       ),

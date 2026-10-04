@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/widgets/rasa_widgets.dart';
 import '../../data/models/post_model.dart';
 import '../../data/services/gemini_service.dart';
 
@@ -72,61 +73,65 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final aiReady = ref.watch(geminiServiceProvider).ready;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [scheme.primary, scheme.tertiary],
+      appBar: RasaAppBar(
+        title: 'RASA AI',
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+            decoration: BoxDecoration(
+              gradient: rasaGradient(scheme),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: scheme.onPrimary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.auto_awesome,
-                size: 18,
-                color: scheme.onPrimary,
-              ),
+                const SizedBox(width: 7),
+                Text(
+                  'Online',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onPrimary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('RASA AI',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
-                  Text('Selalu siap mendengarkan',
-                      style: TextStyle(fontSize: 12)),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
       body: Column(
         children: [
           if (!aiReady)
             Container(
               width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
                 children: [
                   Icon(
-                    Icons.info_outline,
-                    size: 16,
+                    Icons.info_outline_rounded,
+                    size: 18,
                     color: scheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 9),
                   const Expanded(
                     child: Text(
                       'Mode hemat: respons bawaan (offline). Isi GEMINI_KEY agar semakin pintar.',
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: 12, height: 1.45),
                     ),
                   ),
                 ],
@@ -135,77 +140,31 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scroll,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               itemCount: _msgs.length + (_typing ? 1 : 0),
               itemBuilder: (ctx, i) {
                 if (i == _msgs.length) {
                   return Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
+                      margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                          horizontal: 18, vertical: 15),
                       decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(18),
+                        color: scheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(20).copyWith(
+                          bottomLeft: const Radius.circular(6),
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: scheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text('Mengetik'),
-                        ],
-                      ),
+                      child: const TypingDots(),
                     ),
                   );
                 }
                 final m = _msgs[i];
-                return Align(
-                  alignment:
-                      m.mine ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(ctx).size.width * .78,
-                    ),
-                    decoration: BoxDecoration(
-                      color: m.mine
-                          ? scheme.primary
-                          : scheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(18).copyWith(
-                        bottomRight: m.mine
-                            ? const Radius.circular(4)
-                            : const Radius.circular(18),
-                        bottomLeft: m.mine
-                            ? const Radius.circular(18)
-                            : const Radius.circular(4),
-                      ),
-                    ),
-                    child: Text(
-                      m.text,
-                      style: TextStyle(
-                        height: 1.45,
-                        color: m.mine
-                            ? scheme.onPrimary
-                            : scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                );
+                return ChatBubble(text: m.text, mine: m.mine);
               },
             ),
           ),
-          // Saran cepat
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -213,38 +172,23 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               children: [
                 for (final s in kQuickPrompts)
                   Padding(
-                    padding: const EdgeInsets.only(right: 8, bottom: 8),
-                    child: ActionChip(
-                      avatar: const Icon(Icons.north_east, size: 16),
-                      label: Text(s),
-                      onPressed: _typing ? null : () => _send(s),
+                    padding: const EdgeInsets.only(right: 9, bottom: 10),
+                    child: RasaChip(
+                      icon: Icons.north_east_rounded,
+                      label: s,
+                      selected: false,
+                      onSelected: (_) {
+                        if (!_typing) _send(s);
+                      },
                     ),
                   ),
               ],
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _ctrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Ceritakan apa saja',
-                      ),
-                      onSubmitted: (_) => _send(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _send,
-                    icon: const Icon(Icons.send),
-                  ),
-                ],
-              ),
-            ),
+          ChatComposer(
+            controller: _ctrl,
+            hint: 'Ceritakan apa saja',
+            onSend: () => _send(),
           ),
         ],
       ),

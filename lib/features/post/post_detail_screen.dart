@@ -33,7 +33,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   Future<void> _send() async {
-    if (_sending) return;
+    if (_sending || _ctrl.text.trim().isEmpty) return;
     setState(() => _sending = true);
     final err = await ref
         .read(repliesProvider(widget.postId).notifier)
@@ -41,7 +41,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     if (!mounted) return;
     setState(() => _sending = false);
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      RasaSnack.show(context, err, icon: Icons.info_outline_rounded);
       return;
     }
     _ctrl.clear();
@@ -56,9 +56,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     await ref.read(feedProvider.notifier).deletePost(post.id);
     if (!mounted) return;
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cerita dihapus.')),
-    );
+    RasaSnack.show(context, 'Cerita dihapus.', icon: Icons.delete_outline_rounded);
   }
 
   Future<void> _deleteReply(RasaReply reply, String myId) async {
@@ -79,20 +77,34 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final isMine = post != null && post.authorId == session.userId;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Cerita'),
+      appBar: RasaAppBar(
+        title: 'Detail Cerita',
         actions: [
           if (isMine)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: 'Hapus cerita',
-              onPressed: () => _deletePost(post),
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Material(
+                color: const Color(0xFFE5484D).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _deletePost(post),
+                  child: const Padding(
+                    padding: EdgeInsets.all(11),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 22,
+                      color: Color(0xFFE5484D),
+                    ),
+                  ),
+                ),
+              ),
             ),
         ],
       ),
       body: post == null
-          ? const EmptyFeed(
-              icon: Icons.delete_outline,
+          ? const RasaEmptyState(
+              icon: Icons.delete_outline_rounded,
               title: 'Cerita tidak ditemukan',
               message: 'Cerita ini mungkin sudah dihapus pemiliknya.',
             )
@@ -100,7 +112,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               children: [
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                     children: [
                       RasaPostCard(
                         post: post,
@@ -115,9 +127,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             : () => showReportSheet(context, post.id),
                       ),
                       if (post.aiReply != null) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(18),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
@@ -125,33 +137,42 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 scheme.primaryContainer,
                               ],
                             ),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(26),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.auto_awesome,
-                                    size: 18,
-                                    color: scheme.onTertiaryContainer,
+                                  Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      gradient: rasaGradient(scheme),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.auto_awesome_rounded,
+                                      size: 18,
+                                      color: scheme.onPrimary,
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 10),
                                   Text(
                                     'Respons RASA AI',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w800,
+                                      fontSize: 15,
                                       color: scheme.onTertiaryContainer,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Text(
                                 post.aiReply!,
                                 style: TextStyle(
-                                  height: 1.5,
+                                  height: 1.55,
                                   color: scheme.onTertiaryContainer,
                                 ),
                               ),
@@ -159,18 +180,18 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
                       Text(
                         '${replies.length} tanggapan dari komunitas',
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       if (replies.isEmpty)
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           child: Text(
                             'Belum ada tanggapan. Jadilah yang pertama memberikan dukungan.',
                             style: TextStyle(color: scheme.onSurfaceVariant),
@@ -184,42 +205,15 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                                 !r.isAI && r.authorId == session.userId,
                             onDelete: () => _deleteReply(r, session.userId),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 9),
                         ],
                     ],
                   ),
                 ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _ctrl,
-                            maxLines: 3,
-                            minLines: 1,
-                            decoration: const InputDecoration(
-                              hintText: 'Tulis kata penyemangat',
-                            ),
-                            onSubmitted: (_) => _send(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton.filled(
-                          onPressed: _sending ? null : _send,
-                          icon: _sending
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2),
-                                )
-                              : const Icon(Icons.send),
-                        ),
-                      ],
-                    ),
-                  ),
+                ChatComposer(
+                  controller: _ctrl,
+                  hint: 'Tulis kata penyemangat',
+                  onSend: _send,
                 ),
               ],
             ),
@@ -242,13 +236,13 @@ class _ReplyBubble extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final isAI = reply.isAI;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: isAI ? scheme.tertiaryContainer : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        color: isAI ? scheme.tertiaryContainer : scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
         border: isAI
             ? Border.all(color: scheme.tertiary.withValues(alpha: 0.4))
-            : null,
+            : Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,15 +250,18 @@ class _ReplyBubble extends StatelessWidget {
           Row(
             children: [
               if (isAI) ...[
-                Icon(Icons.auto_awesome,
-                    size: 14, color: scheme.onTertiaryContainer),
+                Icon(Icons.auto_awesome_rounded,
+                    size: 15, color: scheme.onTertiaryContainer),
                 const SizedBox(width: 6),
+              ] else ...[
+                RasaAvatar(name: reply.alias, radius: 13),
+                const SizedBox(width: 8),
               ],
               Expanded(
                 child: Text(
                   reply.alias,
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     fontSize: 13,
                     color: isAI
                         ? scheme.onTertiaryContainer
@@ -280,19 +277,24 @@ class _ReplyBubble extends StatelessWidget {
                 ),
               ),
               if (isMine)
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Hapus tanggapan',
-                  onPressed: onDelete,
+                GestureDetector(
+                  onTap: onDelete,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 19,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             reply.text,
             style: TextStyle(
-              height: 1.45,
+              height: 1.5,
               color: isAI ? scheme.onTertiaryContainer : scheme.onSurface,
             ),
           ),
