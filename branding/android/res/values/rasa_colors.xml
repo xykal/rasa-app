@@ -2,4 +2,7 @@
 <resources>
     <!-- Satu-satunya warna brand native: latar ikon adaptif. -->
     <color name="rasa_brand">#FF5A3EE6</color>
+    <!-- Latar splash native: terang & gelap. -->
+    <color name="rasa_splash_bg">#FFFBFAFE</color>
+    <color name="rasa_splash_bg_night">#FF12111A</color>
 </resources>
