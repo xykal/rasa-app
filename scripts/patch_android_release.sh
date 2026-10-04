@@ -34,9 +34,8 @@ cat > "$APP_DIR/proguard-rules.pro" <<'EOF'
 -keep class * implements com.google.gson.JsonSerializer { *; }
 -keep class * implements com.google.gson.JsonDeserializer { *; }
 # Play Core: direferensikan Flutter embedding (deferred components)
-# tapi tidak dipakai app ini — aman diabaikan (fix umum R8 + Flutter).
--dontwarn com.google.android.play.core.splitcompat.**
--dontwarn com.google.android.play.core.splitinstall.**
+# tapi tidak dipakai app ini — bungkam seluruhnya (fix umum R8 + Flutter).
+-dontwarn com.google.android.play.core.**
 EOF
 echo "proguard-rules.pro ditulis"
 
