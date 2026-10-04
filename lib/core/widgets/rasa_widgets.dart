@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../config/app_config.dart';
 import '../../data/models/post_model.dart';
 
 /// ============================================================
@@ -797,31 +798,6 @@ class RasaChip extends StatelessWidget {
   }
 }
 
-/// Data mood: id, label, ikon Material, warna solid.
-class MoodInfo {
-  final String id;
-  final String label;
-  final IconData icon;
-  final Color color;
-  const MoodInfo(this.id, this.label, this.icon, this.color);
-}
-
-const kMoods = [
-  MoodInfo('senang', 'Senang', Icons.sentiment_very_satisfied_rounded,
-      Color(0xFFE39B2D)),
-  MoodInfo('sedih', 'Sedih', Icons.sentiment_dissatisfied_rounded,
-      Color(0xFF4C7DE0)),
-  MoodInfo('marah', 'Marah', Icons.sentiment_very_dissatisfied_rounded,
-      Color(0xFFDE5A5A)),
-  MoodInfo('tenang', 'Tenang', Icons.spa_rounded, Color(0xFF35A06F)),
-  MoodInfo('lelah', 'Lelah', Icons.bedtime_rounded, Color(0xFF8E93A6)),
-  MoodInfo('flat', 'Biasa', Icons.sentiment_neutral_rounded,
-      Color(0xFF8E93A6)),
-];
-
-MoodInfo moodOf(String id) =>
-    kMoods.firstWhere((m) => m.id == id, orElse: () => kMoods.last);
-
 /// Avatar lingkaran solid warna mood + ikon putih.
 class MoodAvatar extends StatelessWidget {
   final String mood;
@@ -1029,14 +1005,14 @@ class RasaPostCard extends StatelessWidget {
               _ReactButton(
                 icon: Icons.volunteer_activism_rounded,
                 label: 'Peluk ${post.hugCount}',
-                active: post.huggedByMe,
+                active: post.hugged,
                 onTap: onHug,
               ),
               const SizedBox(width: 9),
               _ReactButton(
                 icon: Icons.group_outlined,
                 label: 'Aku juga ${post.meTooCount}',
-                active: post.meTooByMe,
+                active: post.meToo,
                 onTap: onMeToo,
               ),
               const Spacer(),
@@ -1826,7 +1802,7 @@ Future<T?> showRasaSheet<T>(
 /// Sheet pilih alasan laporan.
 void showReportSheet(BuildContext context, String postId) {
   const reasons = [
-    (Icons.bullying_outlined, 'Perundungan / kasar'),
+    (Icons.mood_bad_outlined, 'Perundungan / kasar'),
     (Icons.privacy_tip_outlined, 'Bocorkan privasi'),
     (Icons.campaign_outlined, 'Spam / promosi'),
     (Icons.warning_amber_rounded, 'Konten berbahaya'),
